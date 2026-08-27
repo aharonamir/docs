@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent-Core Observability — Current State &amp; Roadmap</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-2: #242734;
+            --border: #2e3144;
+            --text: #e2e4ed;
+            --text-dim: #9499b3;
+            --accent: #6c8aff;
+            --accent-dim: #4a62b8;
+            --green: #4ade80;
+            --green-dim: #22633c;
+            --red: #f87171;
+            --red-dim: #6b2c2c;
+            --yellow: #fbbf24;
+            --yellow-dim: #6b5418;
+            --orange: #fb923c;
+            --purple: #a78bfa;
+            --cyan: #22d3ee;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+        .header {
+            text-align: center;
+            margin-bottom: 56px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header h1 {
+            font-size: 2.2em;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .subtitle { font-size: 1.1em; color: var(--text-dim); max-width: 640px; margin: 0 auto; }
+        .badge-row { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .badge {
+            display: inline-block; padding: 4px 14px; border-radius: 999px;
+            font-size: 0.82em; font-weight: 600; letter-spacing: 0.02em;
+        }
+        .badge-green { background: var(--green-dim); color: var(--green); }
+        .badge-blue  { background: var(--accent-dim); color: var(--accent); }
+        .badge-yellow { background: var(--yellow-dim); color: var(--yellow); }
+        .badge-purple { background: #3b2d6b; color: var(--purple); }
+        .badge-orange { background: #5c3010; color: var(--orange); }
+
+        section { margin-bottom: 52px; }
+        h2 {
+            font-size: 1.5em; font-weight: 700; margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--border);
+        }
+        h3 { font-size: 1.1em; font-weight: 600; margin: 28px 0 10px; color: var(--accent); }
+        p { margin-bottom: 14px; }
+        ul, ol { padding-left: 20px; margin-bottom: 14px; }
+        li { margin-bottom: 4px; }
+
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+        .card-title { font-weight: 600; font-size: 1em; margin-bottom: 8px; }
+        .card p, .card ul { color: var(--text-dim); font-size: 0.91em; }
+        .card ul { padding-left: 16px; margin-top: 4px; }
+
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.91em; }
+        th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--border); }
+        th { background: var(--surface); color: var(--text-dim); font-weight: 600; font-size: 0.84em; text-transform: uppercase; letter-spacing: 0.04em; }
+        td { color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 0.81em; font-weight: 600; }
+        .tag-exists  { background: var(--green-dim); color: var(--green); }
+        .tag-missing { background: var(--red-dim);   color: var(--red);   }
+        .tag-partial { background: var(--yellow-dim); color: var(--yellow); }
+
+        pre {
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+            padding: 18px 20px; overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.87em; line-height: 1.6; margin: 14px 0;
+        }
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.87em; background: var(--surface-2); padding: 2px 7px; border-radius: 4px;
+        }
+        .kw { color: var(--purple); }
+        .str { color: var(--green); }
+        .fn  { color: var(--cyan); }
+        .cm  { color: var(--text-dim); }
+        .imp { color: var(--accent); }
+
+        .arch-box {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+            padding: 24px 28px; margin: 14px 0; overflow-x: auto;
+        }
+        .arch-flow {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.84em;
+            line-height: 1.85; white-space: pre; color: var(--text-dim);
+        }
+        .hl  { color: var(--accent);  font-weight: 600; }
+        .hl2 { color: var(--cyan);    font-weight: 600; }
+        .hl3 { color: var(--green);   font-weight: 600; }
+        .hl4 { color: var(--orange);  font-weight: 600; }
+        .hl5 { color: var(--purple);  font-weight: 600; }
+
+        .timeline { position: relative; padding-left: 32px; }
+        .timeline::before {
+            content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
+            width: 2px; background: var(--border);
+        }
+        .phase-item { position: relative; margin-bottom: 22px; }
+        .phase-item::before {
+            content: ''; position: absolute; left: -28px; top: 7px;
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid var(--border); background: var(--bg);
+        }
+        .phase-item.done::before    { background: var(--green);  border-color: var(--green);  }
+        .phase-item.active::before  { background: var(--accent); border-color: var(--accent); }
+        .phase-item.pending::before { background: var(--surface); border-color: var(--text-dim); }
+        .phase-title { font-weight: 600; font-size: 1em; }
+        .phase-desc  { color: var(--text-dim); font-size: 0.9em; margin-top: 3px; }
+        .phase-meta  { color: var(--text-dim); font-size: 0.82em; margin-top: 4px; font-style: italic; }
+
+        .callout {
+            background: var(--surface); border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 16px 0;
+        }
+        .callout.warn  { border-left-color: var(--yellow); }
+        .callout.done  { border-left-color: var(--green); }
+        .callout p { color: var(--text-dim); font-size: 0.93em; margin-bottom: 6px; }
+        .callout strong { color: var(--text); }
+
+        .stats-row { display: flex; gap: 16px; margin: 20px 0; flex-wrap: wrap; }
+        .stat {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; padding: 18px 24px; text-align: center; flex: 1; min-width: 130px;
+        }
+        .stat-number { font-size: 1.9em; font-weight: 700; color: var(--accent); }
+        .stat-label  { font-size: 0.84em; color: var(--text-dim); margin-top: 4px; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+        .file-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 0.77em; font-weight: 700; text-transform: uppercase;
+            min-width: 70px; text-align: center; font-family: monospace;
+        }
+        .file-exists   { background: var(--green-dim); color: var(--green); }
+        .file-new      { background: var(--accent-dim); color: var(--accent); }
+        .file-modified { background: var(--yellow-dim); color: var(--yellow); }
+
+        .gap-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1>Agent-Core Observability</h1>
+        <p class="subtitle">
+            Current-state audit, remaining gaps, and a pragmatic roadmap for extending
+            observability without breaking the tracing lifecycle that already exists.
+        </p>
+        <div class="badge-row">
+            <span class="badge badge-green">Team OTel — Working</span>
+            <span class="badge badge-blue">Extensions OTel — Working</span>
+            <span class="badge badge-purple">Claude/Codex Bridges — Present</span>
+            <span class="badge badge-orange">Standalone DeepAgent — Gap</span>
+        </div>
+    </div>
+
+    <!-- 1. CURRENT STATE -->
+    <section>
+        <h2>1. Current Repository Status</h2>
+
+        <p>
+            The repository already has substantial tracing support. This page reflects
+            the code as of 2026-08-09 and supersedes the older roadmap language that
+            assumed only two observability systems existed.
+        </p>
+
+        <h3>Team-Agent OTel — <code>agent_teams/observability/</code></h3>
+        <p>
+            Team observability is wired through the global
+            <code>Runner.callback_framework</code>. It emits team roots, per-iteration
+            agent spans, single-round subagent invoke spans, LLM spans, tool spans,
+            and task/member/message spans from the team monitor stream.
+        </p>
+
+        <div class="arch-box">
+            <div class="arch-flow"><span class="hl">team.{name}</span>                              root span, finalized by Runner
+  ├── <span class="hl2">agent.{member}.task_iteration.N</span>      ObservabilityRail
+  │     ├── <span class="hl3">llm.call</span>                          OtelCallbackHandler
+  │     │     └── llm.reasoning                 conditional child span
+  │     └── <span class="hl3">tool.{name}</span>                       OtelCallbackHandler
+  ├── <span class="hl2">agent.{member}.invoke</span>                single-round subagent span
+  ├── <span class="hl4">task.{task_id}</span>                         OtelTeamMonitorHandler
+  │     ├── task.created / claimed / completed
+  │     └── msg.{from}-&gt;{to}
+  └── <span class="hl5">member.{name}.spawned</span>                  OtelTeamMonitorHandler</div>
+        </div>
+
+        <table>
+            <thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+            <tbody>
+                <tr><td><code>setup.py</code></td><td><code>init_observability()</code>, <code>shutdown_observability()</code>, <code>finalize_team_trace()</code>, <code>get_tracer()</code>, <code>is_initialized()</code></td></tr>
+                <tr><td><code>span_context.py</code></td><td><code>ActiveSpanTracker</code>, <code>LlmSpanState</code>, ContextVar state, trace finalization, orphan cleanup</td></tr>
+                <tr><td><code>callback_handler.py</code></td><td>LLM/tool span lifecycle, token usage, TTFT, reasoning timing, redacted payload attributes</td></tr>
+                <tr><td><code>rail.py</code></td><td><code>ObservabilityRail</code>, <code>AgentSpanScope</code>, iteration spans, invoke spans, nested parent restoration</td></tr>
+                <tr><td><code>monitor_handler.py</code></td><td>Task/member/message spans from the <code>TeamEvent</code> stream</td></tr>
+                <tr><td><code>semconv.py</code></td><td><code>gen_ai.*</code>, <code>agentteam.*</code>, <code>deepagent.*</code>, <code>langfuse.*</code> constants</td></tr>
+                <tr><td><code>config.py</code></td><td><code>ObservabilityConfig</code>, exporter selection, redaction, limits, Langfuse auth, file exporter config</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout done">
+            <p><strong>Key design:</strong> <code>ActiveSpanTracker</code> keeps strong references to open spans
+            and cleanup paths drain orphaned child spans during cancellation and finalization. Future work should
+            extend this model rather than adding a second ad hoc span lifecycle.</p>
+        </div>
+
+        <h3>Standalone BaseAgent/Workflow Extension — <code>extensions/tracer_otel/</code></h3>
+        <p>
+            The extension traces standalone BaseAgent and workflow single-invocation paths through
+            <code>core.session.tracer</code>. It owns an independent <code>TracerProvider</code> and
+            deliberately does not call <code>trace.set_tracer_provider()</code>.
+        </p>
+
+        <table>
+            <thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+            <tbody>
+                <tr><td><code>config.py</code></td><td><code>OtelTracerConfig</code> — frozen dataclass, independent from <code>ObservabilityConfig</code></td></tr>
+                <tr><td><code>setup.py</code></td><td><code>init_otel_tracer(config)</code> — creates own <code>TracerProvider</code>, deliberately <strong>does NOT</strong> call <code>set_tracer_provider()</code> to avoid conflict with System A</td></tr>
+                <tr><td><code>handler.py</code></td><td><code>OtelAgentHandler</code>, <code>OtelWorkflowHandler</code> — full span lifecycle via <code>TraceExtAgentHandler</code> / <code>TraceExtWorkflowHandler</code></td></tr>
+                <tr><td><code>otel_rail.py</code></td><td><code>OtelRail(AgentRail)</code> — opt-in single-invoke hooks via session tracer</td></tr>
+                <tr><td><code>span_manager.py</code></td><td><code>OtelAgentSpanManager</code>, <code>OtelWorkflowSpanManager</code></td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout warn">
+            <p><strong>Important:</strong> this extension does not cover standalone DeepAgent task-loop
+            iterations. That gap belongs in <code>agent_teams/observability/ObservabilityRail</code> or a
+            shared successor rail, because task-loop spans need <code>DeepAgentRail</code> hooks.</p>
+        </div>
+
+        <h3>Backend Runtime Bridges — <code>claude/</code> and <code>codex/</code></h3>
+        <p>
+            The repo now includes backend-specific bridges. Claude stream chunks can produce turn,
+            tool, and reasoning spans. Codex support can read rollout traces, receive filtered native
+            logical model-call spans over loopback OTLP/HTTP, and correlate model/tool records into
+            Jiuwen spans.
+        </p>
+
+        <table>
+            <thead><tr><th>Area</th><th>Status</th></tr></thead>
+            <tbody>
+                <tr><td><code>claude/bridge.py</code></td><td>Present; emits spans only when team observability is initialized.</td></tr>
+                <tr><td><code>codex/rollout_trace.py</code></td><td>Present; tails local rollout trace bundles and resolves payload references.</td></tr>
+                <tr><td><code>codex/otel_receiver.py</code></td><td>Present; filters Codex native spans to logical model-call spans.</td></tr>
+                <tr><td><code>codex/bridge.py</code></td><td>Present; correlates model/tool records and emits spans.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 2. GAP ANALYSIS -->
+    <section>
+        <h2>2. Remaining Gaps</h2>
+
+        <table class="gap-table">
+            <thead>
+                <tr>
+                    <th>Gap</th>
+                    <th>Root Cause</th>
+                    <th>Phase</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Standalone DeepAgent tracing</td>
+                    <td><code>ObservabilityRail</code> still requires a team span; factory functions do not accept <code>observability_config</code> or auto-attach the rail.</td>
+                    <td><span class="tag tag-missing">Phase 1</span></td>
+                </tr>
+                <tr>
+                    <td>Session root spans</td>
+                    <td><code>AGENT_SESSION_CREATED</code> exists, but there is no matching session-close event. Session spans need an explicit close/finalization strategy.</td>
+                    <td><span class="tag tag-missing">Phase 2</span></td>
+                </tr>
+                <tr>
+                    <td>Ordered task trajectory</td>
+                    <td>LLM/tool spans exist, but no ordered step list is emitted on the iteration span.</td>
+                    <td><span class="tag tag-missing">Phase 3</span></td>
+                </tr>
+                <tr>
+                    <td>OTel metrics</td>
+                    <td>No <code>MeterProvider</code>, metrics config fields, instruments, or deploy metrics pipeline.</td>
+                    <td><span class="tag tag-missing">Phase 4</span></td>
+                </tr>
+                <tr>
+                    <td>Cost tracking</td>
+                    <td>Token usage is recorded on spans, but no price table, cost attributes, or unknown-model behavior exists.</td>
+                    <td><span class="tag tag-missing">Phase 5</span></td>
+                </tr>
+                <tr>
+                    <td>Multi-agent aggregation</td>
+                    <td>Task spans exist, but member contribution totals for tokens, tools, errors, and duration are not aggregated.</td>
+                    <td><span class="tag tag-missing">Phase 5</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Coverage Map Today</h3>
+
+        <table>
+            <thead>
+                <tr><th>Capability</th><th>Team Agent</th><th>Standalone DeepAgent</th><th>Single BaseAgent</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>LLM call spans (model, tokens, TTFT)</td><td><span class="tag tag-exists">Yes</span></td><td><span class="tag tag-missing">No*</span></td><td><span class="tag tag-exists">Yes**</span></td></tr>
+                <tr><td>Tool call spans</td><td><span class="tag tag-exists">Yes</span></td><td><span class="tag tag-missing">No*</span></td><td><span class="tag tag-partial">Partial**</span></td></tr>
+                <tr><td>Task iteration spans</td><td><span class="tag tag-exists">Yes</span></td><td><span class="tag tag-missing">No</span></td><td>N/A</td></tr>
+                <tr><td>Team/task/member/message spans</td><td><span class="tag tag-exists">Yes</span></td><td>N/A</td><td>N/A</td></tr>
+                <tr><td>Session root span</td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td></tr>
+                <tr><td>Trajectory (ordered step sequence)</td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td></tr>
+                <tr><td>Metrics (histograms, counters)</td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td></tr>
+                <tr><td>Multi-agent task aggregation</td><td><span class="tag tag-missing">No</span></td><td>N/A</td><td>N/A</td></tr>
+                <tr><td>Cost estimation</td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td><td><span class="tag tag-missing">No</span></td></tr>
+            </tbody>
+        </table>
+        <p style="font-size:0.87em; color: var(--text-dim);">* Team observability callbacks fire, but parent resolution skips spans outside team context.</p>
+        <p style="font-size:0.87em; color: var(--text-dim);">** Via <code>extensions/tracer_otel</code>, not via team observability.</p>
+    </section>
+
+    <!-- 3. ROADMAP -->
+    <section>
+        <h2>3. Recommended Roadmap</h2>
+
+        <div class="timeline">
+            <div class="phase-item active">
+                <div class="phase-title">Phase 0 — Audit Tests And Freeze The Current Contract</div>
+                <div class="phase-desc">Document the current trace tree, subagent nesting, cancellation cleanup, bridge behavior, and shutdown idempotency before changing span ownership.</div>
+                <div class="phase-meta">No product behavior change; protects the existing lifecycle model.</div>
+            </div>
+            <div class="phase-item active">
+                <div class="phase-title">Phase 1 — Standalone DeepAgent OTel</div>
+                <div class="phase-desc">Add explicit factory opt-in and a standalone root path in <code>ObservabilityRail</code>, reusing <code>AgentSpanScope</code>.</div>
+                <div class="phase-meta">Primary files: <code>agent_teams/observability/rail.py</code>, <code>harness/factory.py</code></div>
+            </div>
+            <div class="phase-item pending">
+                <div class="phase-title">Phase 2 — Session-Level Spans</div>
+                <div class="phase-desc">Add session roots only with a real close/finalization strategy; <code>AGENT_SESSION_CREATED</code> exists but no close event does.</div>
+                <div class="phase-meta">Likely new file: <code>agent_teams/observability/session_span.py</code></div>
+            </div>
+            <div class="phase-item pending">
+                <div class="phase-title">Phase 3 — Ordered Trajectory Events</div>
+                <div class="phase-desc">Emit close-time LLM/tool facts as ordered <code>trajectory.step</code> events on each iteration span.</div>
+                <div class="phase-meta">New file: <code>agent_teams/observability/trajectory_tracker.py</code></div>
+            </div>
+            <div class="phase-item pending">
+                <div class="phase-title">Phase 4 — Metrics Infrastructure</div>
+                <div class="phase-desc">Add disabled-by-default OTel metrics for tokens, latency, tool errors, and iteration duration.</div>
+                <div class="phase-meta">New file: <code>agent_teams/observability/metrics.py</code></div>
+            </div>
+            <div class="phase-item pending">
+                <div class="phase-title">Phase 5 — Cost And Aggregation</div>
+                <div class="phase-desc">Add explicit estimated-cost semantics and aggregate known member contributions onto task/team/session spans.</div>
+                <div class="phase-meta">New files likely include <code>cost_tracker.py</code> and <code>task_aggregator.py</code></div>
+            </div>
+        </div>
+
+        <h3>Dependency Graph</h3>
+        <div class="arch-box">
+            <div class="arch-flow"><span class="hl">Phase 0</span>  contract tests              ─── start here
+<span class="hl">Phase 1</span>  standalone DeepAgent       ─── depends on Phase 0
+<span class="hl2">Phase 2</span>  session spans              ─── depends on lifecycle decision
+<span class="hl2">Phase 3</span>  trajectory events          ─── can follow Phase 0/1
+<span class="hl2">Phase 4</span>  metrics                    ─── can follow Phase 0
+<span class="hl3">Phase 5</span>  cost + aggregation         ─── benefits from Phase 3/4 data</div>
+        </div>
+    </section>
+
+    <!-- 4. PHASE DETAILS -->
+    <section>
+        <h2>4. Phase Details</h2>
+
+        <h3>Phase 0: Audit Tests And Freeze The Current Contract</h3>
+        <p>
+            Add or update tests that lock down the current team trace tree, subagent
+            invoke nesting, cancellation cleanup, Claude/Codex bridge behavior, and
+            shutdown idempotency. This protects the existing span lifecycle before
+            standalone support changes parent resolution.
+        </p>
+
+        <!-- Phase 1 -->
+        <h3>Phase 1: Standalone DeepAgent OTel</h3>
+
+        <p>
+            <strong>Problem:</strong> both <code>before_task_iteration</code> and
+            <code>before_invoke</code> currently skip span creation when there is no
+            team span. <code>create_deep_agent()</code> also has no observability opt-in
+            parameter.
+        </p>
+
+        <p>
+            <strong>Solution:</strong> add explicit factory opt-in, append
+            <code>ObservabilityRail</code> when needed, and create a standalone root
+            using the existing <code>AgentSpanScope</code> lifecycle. LLM/tool parent
+            resolution must use the current standalone span rather than returning
+            <code>None</code>.
+        </p>
+
+        <div class="two-col">
+            <div>
+                <p style="font-size:0.9em; color:var(--text-dim);">Likely modified files</p>
+                <ul style="font-family:monospace; font-size:0.87em; color:var(--text-dim);">
+                    <li><span class="file-tag file-modified">MODIFIED</span> <code>agent_teams/observability/rail.py</code></li>
+                    <li><span class="file-tag file-modified">MODIFIED</span> <code>harness/factory.py</code></li>
+                    <li><span class="file-tag file-modified">MODIFIED</span> <code>agent_teams/observability/callback_handler.py</code></li>
+                </ul>
+            </div>
+            <div>
+                <p style="font-size:0.9em; color:var(--text-dim);">New tests</p>
+                <ul style="font-family:monospace; font-size:0.87em; color:var(--text-dim);">
+                    <li><code>tests/unit_tests/agent_teams/observability/test_standalone_rail.py</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <pre><span class="cm"># Usage after Phase 1 — standalone DeepAgent</span>
+<span class="kw">from</span> <span class="imp">openjiuwen.harness.factory</span> <span class="kw">import</span> create_deep_agent
+<span class="kw">from</span> <span class="imp">openjiuwen.agent_teams.observability</span> <span class="kw">import</span> ObservabilityConfig
+
+agent = <span class="fn">create_deep_agent</span>(
+    model=model,
+    enable_task_loop=<span class="kw">True</span>,
+    observability_config=<span class="fn">ObservabilityConfig</span>(endpoint=<span class="str">"http://localhost:4317"</span>),
+    <span class="cm"># ObservabilityRail auto-attached; creates root span when no team span exists</span>
+)</pre>
+
+        <!-- Phase 2 -->
+        <h3>Phase 2: Session-Level Spans</h3>
+
+        <p>
+            <code>SessionEvents.AGENT_SESSION_CREATED</code> is available and is triggered
+            by <code>AgentSession.pre_run()</code> and the session controller. There is no
+            <code>SESSION_CLOSED</code> or <code>AGENT_SESSION_CLOSED</code> event, so this
+            phase must first decide where spans close.
+        </p>
+
+        <div class="arch-box">
+            <div class="arch-flow"><span class="hl2">session.{session_id}</span>                    root if lifecycle owner can close it
+  ├── <span class="hl">team.{name}</span> or <span class="hl">agent.{name}</span>      child root for one run
+  │     └── agent.{member}.task_iteration.N
+  └── close-time metadata: duration, agent_count, optional totals</div>
+        </div>
+
+        <p>Likely new file: <code>session_span.py</code> with <code>SessionSpanManager</code></p>
+        <ul>
+            <li><code>open_session_span(session_id, tracer)</code> — creates the root and stores ownership state</li>
+            <li><code>close_session_span(session_id)</code> — ends the span from an explicit lifecycle path</li>
+            <li><code>get_session_span(session_id)</code> — returns open span or None</li>
+        </ul>
+        <div class="callout warn">
+            <p><strong>Risk:</strong> do not leave long-lived session spans open until process shutdown unless that is the intended lifecycle. Add a close event only at a real lifecycle owner.</p>
+        </div>
+
+        <!-- Phase 3 -->
+        <h3>Phase 3: Ordered Trajectory Events</h3>
+
+        <p>
+            Each agent iteration span has child LLM/tool spans, but not a compact
+            ordered list of what happened. Add <code>trajectory.step</code> events before
+            the iteration span closes.
+        </p>
+
+        <div class="arch-box">
+            <div class="arch-flow"><span class="hl">agent.{member}.task_iteration.N</span>
+  events:
+    trajectory.step {seq: 1, kind: "llm", model: "...", prompt_tokens: 1240}
+    trajectory.step {seq: 2, kind: "tool", name: "bash", duration_ms: 1100}
+    trajectory.step {seq: 3, kind: "llm", model: "...", completion_tokens: 120}</div>
+        </div>
+
+        <p>
+            Start with span events instead of a durable store. Reuse
+            <code>agent_evolving.trajectory</code> types only if they fit cleanly; do not
+            couple the tracing hot path to training/evolution persistence.
+        </p>
+
+        <!-- Phase 4 -->
+        <h3>Phase 4: Metrics Infrastructure</h3>
+
+        <p>
+            Add a disabled-by-default <code>MeterProvider</code> and recorder API. Metrics
+            should remain opt-in so trace-only users do not get new exporter side effects.
+        </p>
+
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-title">Token Usage Counter</div>
+                <p>Prompt/completion/total tokens by model and agent_id. Cumulative counter.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">LLM Latency Histogram</div>
+                <p>Duration (ms) per LLM call by model. Enables p50/p95/p99 reporting.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">Tool Call Counter + Histogram</div>
+                <p>Call count and duration per tool_name. Error rate as separate counter.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">Task Iteration Histogram</div>
+                <p>Duration per task iteration by agent_id. Basis for task SLOs.</p>
+            </div>
+        </div>
+
+        <p>Config additions: <code>metrics_enabled: bool = False</code>, <code>metrics_endpoint: str = ""</code>, and a metrics exporter selector.</p>
+
+        <!-- Phase 5 -->
+        <h3>Phase 5: Cost And Aggregation</h3>
+
+        <p>
+            Add useful summaries while being explicit that cost is estimated. Pricing
+            should be overrideable and unknown models should produce token totals
+            without pretending a USD estimate is known.
+        </p>
+
+        <div class="arch-box">
+            <div class="arch-flow"><span class="hl4">task.{task_id}</span>
+  attributes added by Phase 5:
+    agentteam.task.total_prompt_tokens:      4820
+    agentteam.task.total_completion_tokens:  1340
+    agentteam.task.total_tool_calls:         8
+    agentteam.task.estimated_cost_usd:       0.0182
+    agentteam.task.cost_pricing_version:     "..."
+    agentteam.task.member_contributions:     {"alice": {...}, "bob": {...}}</div>
+        </div>
+    </section>
+
+    <!-- 5. ARCHITECTURE OVERVIEW -->
+    <section>
+        <h2>5. Architecture Overview</h2>
+
+        <h3>Coexisting Tracing Paths</h3>
+
+        <div class="arch-box">
+            <div class="arch-flow"><span class="hl">agent_teams/observability/</span>        <span class="hl2">extensions/tracer_otel/</span>        <span class="hl5">backend bridges</span>
+───────────────────────────────     ─────────────────────────     ─────────────────────────
+Runner.callback_framework           core.session.tracer            Claude/Codex runtime data
+Global provider                      private provider              uses team observability runtime
+Team + future DeepAgent              BaseAgent/workflow            backend-specific span enrichment</div>
+        </div>
+
+        <h3>Target Parent Resolution</h3>
+
+        <div class="arch-box">
+            <div class="arch-flow">For team observability LLM/tool spans:
+  1. current agent span, when recording
+  2. current team span, when recording
+  3. future standalone root/current span, for explicit standalone DeepAgent opt-in
+  4. future session span, only if lifecycle-safe close behavior exists</div>
+        </div>
+
+        <h3>Data Flow</h3>
+
+        <div class="arch-box">
+            <div class="arch-flow">Agent Code
+  │
+  ├─ Runner.callback_framework ──→ OtelCallbackHandler ──→ LLM span
+  │                            ──→ OtelCallbackHandler ──→ Tool span
+  │                            ──→ TrajectoryTracker.record_*()   (Phase 3)
+  │                            ──→ MetricsRecorder.record_*()     (Phase 4)
+  │                            ──→ CostTracker.record_usage()     (Phase 5)
+  │
+  ├─ TeamEvent stream ──→ OtelTeamMonitorHandler ──→ Task / Member spans
+  │                   ──→ TaskAggregator                          (Phase 5)
+  │
+  ├─ DeepAgentRail ──→ ObservabilityRail ──→ Agent iteration span
+  │                                     ──→ TrajectoryTracker.emit_to_span()  (Phase 3)
+  │                                     ──→ MetricsRecorder.record_iteration() (Phase 4)
+  │
+  └─ SessionEvents ──→ SessionSpanManager                         (Phase 2)
+
+All spans export via OTLP to:
+  OTel Collector (deploy/observability/) ──→ Langfuse (traces)
+                                         ──→ Prometheus (metrics, Phase 4)</div>
+        </div>
+    </section>
+
+    <!-- 6. WHAT CAN BE ADDED -->
+    <section>
+        <h2>6. What We Can Add Now</h2>
+
+        <p>
+            The highest-value additions are standalone DeepAgent tracing, disabled-by-default
+            metrics, ordered trajectory events, and cost estimates with explicit uncertainty.
+            Session root spans are useful but should wait for a clear close lifecycle.
+        </p>
+
+        <table>
+            <thead><tr><th>Addition</th><th>Why It Fits Current State</th></tr></thead>
+            <tbody>
+                <tr><td>Standalone DeepAgent tracing</td><td>Closes the largest gap while reusing existing callback and rail machinery.</td></tr>
+                <tr><td>Metrics</td><td>Adds dashboards and alerting without changing trace behavior when disabled.</td></tr>
+                <tr><td>Trajectory events</td><td>Small addition that makes iteration spans much easier to inspect.</td></tr>
+                <tr><td>Cost estimates</td><td>Uses existing usage attributes if pricing is versioned and overrideable.</td></tr>
+                <tr><td>Session roots</td><td>Valuable, but only after the close/finalization contract is settled.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 7. DEPLOY -->
+    <section>
+        <h2>7. Deployment Stack</h2>
+
+        <div class="arch-box">
+            <div class="arch-flow"><span class="hl">Agent process</span>  ── OTLP/gRPC :4317 ──→  <span class="hl2">OTel Collector</span>  ──→  <span class="hl3">Langfuse</span> :3000
+(opentelemetry-sdk)                   (batch/truncate)         (PostgreSQL + ClickHouse)
+                                             │
+                                             └──→ <span class="hl4">Prometheus</span> :9090   (Phase 4)
+                                                        │
+                                                        └──→ Grafana :3001</div>
+        </div>
+
+        <pre><span class="cm"># Start the stack</span>
+<span class="kw">cd</span> deploy/observability &amp;&amp; docker-compose up -d
+
+<span class="cm"># Langfuse UI:  http://localhost:3000</span>
+<span class="cm"># Prometheus:   http://localhost:9090  (after Phase 4)</span></pre>
+
+        <p>
+            The deploy directory already contains the Langfuse v3 stack, collector
+            config, README, and a trace-upload helper. Metrics work should add the
+            collector metrics pipeline and Prometheus/Grafana wiring.
+        </p>
+    </section>
+
+    <!-- 8. STATS -->
+    <section>
+        <h2>8. Summary</h2>
+
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Tracing areas present</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">6</div>
+                <div class="stat-label">Roadmap phases including audit</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Metrics providers today</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">1</div>
+                <div class="stat-label">Highest-risk phase: session roots</div>
+            </div>
+        </div>
+
+        <div class="callout">
+            <p>
+                <strong>Source of truth:</strong> keep this page synchronized with
+                <code>docs/observability/PLAN.md</code>. The filename is currently
+                misspelled as <code>observability_architechture.html</code>; references
+                should use the existing path unless the file is renamed in a separate
+                cleanup.
+            </p>
+        </div>
+    </section>
+
+</div>
+</body>
+</html>
