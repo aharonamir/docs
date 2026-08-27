@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent_evolving — Self-Evolving Agent Framework</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3348;
+    --text: #e1e4ed;
+    --text-muted: #8b8fa3;
+    --accent: #7c6aef;
+    --accent2: #5b9cf6;
+    --accent3: #4ecdc4;
+    --accent4: #f7b731;
+    --accent5: #fc5c65;
+    --accent6: #a55eea;
+    --green: #26de81;
+    --orange: #fd9644;
+    --red: #fc5c65;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2.4rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+  h2 {
+    font-size: 1.6rem;
+    color: var(--accent2);
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--border);
+  }
+  h3 {
+    font-size: 1.2rem;
+    color: var(--accent3);
+    margin-top: 1.8rem;
+    margin-bottom: 0.6rem;
+  }
+  h4 {
+    font-size: 1.05rem;
+    color: var(--accent4);
+    margin-top: 1.2rem;
+    margin-bottom: 0.4rem;
+  }
+  p, li { color: var(--text); margin-bottom: 0.5rem; }
+  ul, ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+  code {
+    background: var(--surface2);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.88rem;
+    color: var(--accent3);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.8rem 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; }
+  .subtitle { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .card h4 { margin-top: 0; }
+  .flow-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  .flow-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+    min-width: 100px;
+  }
+  .flow-step.highlight {
+    border-color: var(--accent);
+    background: rgba(124,106,239,0.12);
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 1.4rem;
+    font-weight: bold;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0;
+    font-size: 0.92rem;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--accent2);
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+  }
+  td {
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  tr:nth-child(even) { background: var(--surface); }
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin: 0.1rem;
+  }
+  .tag-purple { background: rgba(124,106,239,0.2); color: var(--accent); }
+  .tag-blue { background: rgba(91,156,246,0.2); color: var(--accent2); }
+  .tag-teal { background: rgba(78,205,196,0.2); color: var(--accent3); }
+  .tag-yellow { background: rgba(247,183,49,0.2); color: var(--accent4); }
+  .tag-red { background: rgba(252,92,101,0.2); color: var(--accent5); }
+  .tag-green { background: rgba(38,222,129,0.2); color: var(--green); }
+  .layer-box {
+    border-left: 4px solid;
+    padding: 1rem 1.2rem;
+    margin: 0.8rem 0;
+    background: var(--surface);
+    border-radius: 0 8px 8px 0;
+  }
+  .layer-box.l1 { border-color: var(--accent); }
+  .layer-box.l2 { border-color: var(--accent2); }
+  .layer-box.l3 { border-color: var(--accent3); }
+  .layer-box.l4 { border-color: var(--accent4); }
+  .layer-box.l5 { border-color: var(--accent5); }
+  .toc { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.5rem; margin: 1.5rem 0; }
+  .toc a { color: var(--accent2); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ul { list-style: none; padding-left: 1rem; }
+  .toc > ul { padding-left: 0; }
+  .file-ref { color: var(--text-muted); font-size: 0.82rem; font-family: monospace; }
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+  .diagram pre { border: none; background: none; padding: 0; margin: 0; }
+  .badge-new { background: var(--green); color: var(--bg); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem; font-weight: 700; vertical-align: super; }
+</style>
+</head>
+<body>
+
+<h1>agent_evolving</h1>
+<p class="subtitle">Self-Evolving Training &amp; Evaluation Framework for AI Agents</p>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ul>
+    <li><a href="#overview">1. Overview</a></li>
+    <li><a href="#architecture">2. Architecture &amp; Module Map</a></li>
+    <li><a href="#pipeline">3. The Core Evolution Pipeline</a></li>
+    <li><a href="#dataset">4. Dataset (Case / EvaluatedCase)</a></li>
+    <li><a href="#evaluator">5. Evaluator</a></li>
+    <li><a href="#trajectory">6. Trajectory</a></li>
+    <li><a href="#signal">7. Signal Detection</a></li>
+    <li><a href="#optimizer">8. Optimizers</a></li>
+    <li><a href="#updater">9. Updater (Single-Dim &amp; Multi-Dim)</a></li>
+    <li><a href="#trainer">10. Trainer (Orchestrator)</a></li>
+    <li><a href="#checkpointing">11. Checkpointing</a></li>
+    <li><a href="#rl">12. RL Training (agent_rl)</a></li>
+    <li><a href="#online">13. Online Evolution (EvolutionRail)</a></li>
+    <li><a href="#putting-it-together">14. Putting It All Together</a></li>
+  </ul>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="overview">1. Overview</h2>
+<!-- ================================================================ -->
+
+<p>
+  <code>openjiuwen/agent_evolving/</code> is the <strong>self-evolving optimization framework</strong> for AI agents.
+  It enables agents to automatically improve their performance through iterative cycles of
+  <em>evaluation</em>, <em>signal detection</em>, <em>parameter optimization</em>, and <em>writeback</em>.
+</p>
+
+<p>The package supports two complementary evolution paradigms:</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4><span class="tag tag-blue">Offline</span> Batch Evolution</h4>
+    <p>Run the agent against a dataset of cases, evaluate the outputs, extract trajectories,
+    detect failure signals, and optimize prompts / tool descriptions / skills in a supervised loop.
+    Orchestrated by the <code>Trainer</code> class.</p>
+  </div>
+  <div class="card">
+    <h4><span class="tag tag-teal">Online</span> Live Evolution</h4>
+    <p>During normal agent operation, an <code>EvolutionRail</code> captures trajectories
+    from each invoke, detects signals in real-time, and triggers skill/prompt evolution
+    asynchronously in the background.</p>
+  </div>
+  <div class="card">
+    <h4><span class="tag tag-purple">RL</span> Reinforcement Learning</h4>
+    <p>Collect multi-turn rollouts from agent interactions, compute rewards, and train
+    the underlying LLM using PPO/GRPO via the Verl framework. Supports both offline
+    (batch rollout) and online (gateway-based) modes.</p>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="architecture">2. Architecture &amp; Module Map</h2>
+<!-- ================================================================ -->
+
+<pre>
+agent_evolving/
+├── __init__.py              # Public API aggregation (all major exports)
+├── constant.py              # TuneConstant defaults
+├── utils.py                 # Shared utilities (JSON parsing, validation)
+│
+├── dataset/                 # Training/evaluation data
+│   ├── case.py              #   Case, EvaluatedCase (Pydantic models)
+│   └── case_loader.py       #   CaseLoader (file-based loading)
+│
+├── evaluator/               # Scoring engine
+│   ├── evaluator.py         #   BaseEvaluator, DefaultEvaluator, MetricEvaluator
+│   ├── metrics/             #   Metric plugins (ExactMatch, LLMAsJudge)
+│   └── templates.py         #   LLM judge prompt templates
+│
+├── trajectory/              # Execution trace capture
+│   ├── types.py             #   Trajectory, TrajectoryStep, LLMCallDetail, ToolCallDetail
+│   ├── builder.py           #   TrajectoryBuilder (assembly)
+│   ├── extractor.py         #   TracerTrajectoryExtractor (Session → Trajectory)
+│   ├── aggregator.py        #   Cross-member trajectory aggregation (team)
+│   ├── operation.py         #   Trajectory operations (filter, merge)
+│   └── store.py             #   TrajectoryStore (in-memory, file-based)
+│
+├── signal/                  # Evolution signal detection
+│   ├── base.py              #   EvolutionSignal, EvolutionCategory, EvolutionTarget
+│   ├── from_eval.py         #   EvaluatedCase → EvolutionSignal (offline)
+│   └── from_conv.py         #   ConversationSignalDetector (online + offline)
+│
+├── optimizer/               # Dimension-specific optimizers
+│   ├── base.py              #   BaseOptimizer, TextualParameter
+│   ├── llm_call/            #   Prompt optimization (InstructionOptimizer)
+│   ├── tool_call/           #   Tool description optimization
+│   ├── skill_call/          #   Skill experience optimization (SkillExperienceOptimizer)
+│   ├── memory_call/         #   Memory operator optimization
+│   ├── team_skill_optimizer.py  # Team-level skill optimization
+│   └── llm_resilience.py    #   Retry / resilience for LLM calls in optimizers
+│
+├── updater/                 # Update orchestration
+│   ├── protocol.py          #   Updater protocol (interface)
+│   ├── single_dim.py        #   SingleDimUpdater (one optimizer)
+│   └── multi_dim.py         #   MultiDimUpdater (multiple domain optimizers)
+│
+├── trainer/                 # Training orchestrator
+│   ├── trainer.py           #   Trainer (evaluate → update → writeback loop)
+│   └── progress.py          #   Progress, Callbacks
+│
+├── checkpointing/           # State persistence
+│   ├── types.py             #   EvolveCheckpoint, EvolutionRecord, EvolutionPatch, etc.
+│   ├── manager.py           #   DefaultCheckpointManager
+│   ├── evolution_store.py   #   EvolutionLog store
+│   └── store_file.py        #   FileCheckpointStore
+│
+└── agent_rl/                # RL training extension
+    ├── __init__.py           #   Lazy exports (OfflineRLOptimizer, OnlineRLOptimizer)
+    ├── schemas.py            #   Rollout, RolloutMessage, RLTask, RolloutWithReward
+    ├── reward.py             #   RewardRegistry
+    ├── rl_rail.py            #   RLRail (offline trajectory collection)
+    ├── proxy.py              #   LLM proxy for rollout collection
+    ├── config/               #   RLConfig, OfflineConfig, OnlineConfig
+    ├── dataset.py            #   RL dataset utilities
+    ├── optimizer/            #   OfflineRLOptimizer, OnlineRLOptimizer, TaskRunner
+    ├── offline/              #   Offline RL: runtime, coordinator, store
+    ├── online/               #   Online RL: gateway, judge, scheduler, rail
+    ├── rl_trainer/           #   PPO step, Verl executor/converter
+    └── storage/              #   Trajectory store (Redis, LoRA repo)
+</pre>
+
+<!-- ================================================================ -->
+<h2 id="pipeline">3. The Core Evolution Pipeline</h2>
+<!-- ================================================================ -->
+
+<p>The offline evolution pipeline follows an <strong>evaluate &rarr; detect signals &rarr; optimize &rarr; writeback</strong> loop:</p>
+
+<div class="diagram">
+<pre>
+                    ┌─────────────────────────────────────────────────────────┐
+                    │                    Trainer.train()                       │
+                    │              (Orchestrates the full loop)               │
+                    └─────────────────────────────────────────────────────────┘
+                                       │
+         ┌─────────────────────────────┼──────────────────────────────┐
+         ▼                             ▼                              ▼
+  ┌──────────────┐           ┌──────────────────┐          ┌──────────────────┐
+  │  1. FORWARD  │           │  2. EVALUATE     │          │  3. UPDATE       │
+  │  agent.invoke│──────────▶│  Evaluator scores│─────────▶│  Updater analyzes│
+  │  on cases    │           │  each prediction │          │  signals, runs   │
+  │              │           │  against labels  │          │  optimizers      │
+  └──────────────┘           └──────────────────┘          └──────────────────┘
+         │                             │                              │
+         ▼                             ▼                              ▼
+  ┌──────────────┐           ┌──────────────────┐          ┌──────────────────┐
+  │  Trajectory  │           │  EvaluatedCase   │          │  Updates dict    │
+  │  extraction  │           │  (score, reason) │          │  (operator_id,   │
+  │  from Session│           │                  │          │   target) → value│
+  └──────────────┘           └──────────────────┘          └──────────────────┘
+         │                             │                              │
+         └──────────┬──────────────────┘                              │
+                    ▼                                                 ▼
+           ┌──────────────────┐                            ┌──────────────────┐
+           │  Signal Detection│                            │  4. WRITEBACK    │
+           │  Convert failures│                            │  Apply Updates   │
+           │  to EvolutionSignal│                           │  to Operators    │
+           └──────────────────┘                            │  via set_parameter│
+                                                           └──────────────────┘
+                    │                                             │
+                    └──────────┬──────────────────────────────────┘
+                               ▼
+                    ┌──────────────────┐
+                    │  5. VALIDATE     │
+                    │  Re-evaluate on  │
+                    │  val_cases       │
+                    │  Keep if improved│
+                    └──────────────────┘
+                               │
+                    ┌──────────┴──────────┐
+                    ▼                     ▼
+               Continue              Early Stop
+               next epoch         (score ≥ threshold)
+</pre>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="dataset">4. Dataset (Case / EvaluatedCase)</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/dataset/case.py</span></p>
+
+<div class="layer-box l2">
+<h4>Case</h4>
+<p>A single training/evaluation sample:</p>
+<ul>
+  <li><code>inputs: Dict</code> — the query or conversation to send to the agent</li>
+  <li><code>label: Dict</code> — the expected answer or desired output</li>
+  <li><code>tools: Optional[List[ToolInfo]]</code> — tools available for this case</li>
+  <li><code>case_id: str</code> — auto-generated unique identifier</li>
+</ul>
+</div>
+
+<div class="layer-box l3">
+<h4>EvaluatedCase</h4>
+<p>Wraps a Case with the agent's prediction and evaluation result:</p>
+<ul>
+  <li><code>case: Case</code> — the original case</li>
+  <li><code>answer: Dict</code> — the agent's output</li>
+  <li><code>score: float</code> — composite score in [0, 1]</li>
+  <li><code>reason: str</code> — why this score was given</li>
+  <li><code>per_metric: Optional[Dict[str, float]]</code> — per-metric breakdown</li>
+</ul>
+</div>
+
+<p><code>CaseLoader</code> loads cases from files (JSON, etc.) and provides <code>get_cases()</code>.</p>
+
+<!-- ================================================================ -->
+<h2 id="evaluator">5. Evaluator</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/evaluator/evaluator.py</span></p>
+
+<table>
+  <tr>
+    <th>Class</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td><code>BaseEvaluator</code></td>
+    <td>Abstract base with <code>evaluate(case, predict)</code> and <code>batch_evaluate()</code> (parallel via ThreadPoolExecutor)</td>
+  </tr>
+  <tr>
+    <td><code>DefaultEvaluator</code></td>
+    <td>Uses <strong>LLM-as-judge</strong>: sends question + expected answer + model answer to an LLM, parses pass/fail result (score 0 or 1). Includes retry on parse failure.</td>
+  </tr>
+  <tr>
+    <td><code>MetricEvaluator</code></td>
+    <td>Aggregates one or more <code>Metric</code> plugins with configurable aggregation (mean, first). Supports per-metric breakdown.</td>
+  </tr>
+</table>
+
+<h4>Built-in Metrics</h4>
+<table>
+  <tr><th>Metric</th><th>How it scores</th></tr>
+  <tr>
+    <td><code>ExactMatchMetric</code></td>
+    <td>String comparison between prediction and label</td>
+  </tr>
+  <tr>
+    <td><code>LLMAsJudgeMetric</code></td>
+    <td>Delegates to an LLM to judge correctness, returning a structured score</td>
+  </tr>
+</table>
+
+<!-- ================================================================ -->
+<h2 id="trajectory">6. Trajectory</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/trajectory/types.py</span></p>
+
+<p>A <strong>Trajectory</strong> is the complete execution trace of an agent invocation — every LLM call and tool call, with full input/output data.</p>
+
+<div class="diagram">
+<pre>
+Trajectory
+├── execution_id: str           # Unique ID for this run
+├── source: "offline"|"online"  # Where it was captured
+├── case_id: Optional[str]      # Dataset case (offline)
+├── session_id: Optional[str]   # Conversation session (online)
+├── cost: CostInfo              # Token usage aggregation
+├── meta: Dict                  # Extension metadata
+└── steps: List[TrajectoryStep]
+    │
+    ├── TrajectoryStep (kind="llm")
+    │   ├── detail: LLMCallDetail
+    │   │   ├── model: str
+    │   │   ├── messages: List[Dict]    # Full message history
+    │   │   ├── response: Dict          # LLM response
+    │   │   ├── tools: List[Dict]       # Tool definitions sent
+    │   │   └── usage: Dict             # Token counts
+    │   ├── prompt_token_ids: List[int] # Lifted from response
+    │   ├── completion_token_ids: List[int]
+    │   ├── logprobs: Any               # Token-level log probabilities
+    │   └── meta: Dict (operator_id, invoke relationships)
+    │
+    └── TrajectoryStep (kind="tool")
+        ├── detail: ToolCallDetail
+        │   ├── tool_name: str
+        │   ├── call_args: Any
+        │   ├── call_result: Any
+        │   ├── tool_description: str
+        │   └── tool_schema: Dict
+        └── meta: Dict (operator_id, tool_call_id)
+</pre>
+</div>
+
+<h3>Extraction</h3>
+<p><code>TracerTrajectoryExtractor</code> converts a <code>Session</code> object into a <code>Trajectory</code>
+by reading the session's tracer spans. Each span is classified as <code>"llm"</code>, <code>"tool"</code>,
+or <code>"agent"</code> and converted into the appropriate step type.</p>
+
+<p>For team scenarios, <code>TrajectoryAggregator</code> merges trajectories from multiple members
+into a single cross-member trajectory with collaboration metadata.</p>
+
+<!-- ================================================================ -->
+<h2 id="signal">7. Signal Detection</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/signal/</span></p>
+
+<p>Signals are the bridge between <em>"something went wrong"</em> and <em>"here's what to optimize"</em>.</p>
+
+<div class="layer-box l5">
+<h4>EvolutionSignal</h4>
+<ul>
+  <li><code>signal_type</code>: What happened — <code>"execution_failure"</code>, <code>"user_correction"</code>, <code>"low_score"</code>, <code>"script_artifact"</code>, <code>"collaboration_*"</code></li>
+  <li><code>evolution_type</code>: <code>SKILL_EXPERIENCE</code> or <code>NEW_SKILL</code></li>
+  <li><code>section</code>: Target SKILL.md section — <code>"Troubleshooting"</code>, <code>"Examples"</code>, <code>"Scripts"</code>, <code>"Collaboration"</code></li>
+  <li><code>excerpt</code>: Relevant text snippet from the conversation</li>
+  <li><code>tool_name</code> / <code>skill_name</code>: Context about which tool or skill was involved</li>
+</ul>
+</div>
+
+<h3>Two Signal Sources</h3>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>Offline: <code>from_eval.py</code></h4>
+    <p>Converts <code>EvaluatedCase</code> → <code>EvolutionSignal</code>. Low-score cases become
+    <code>"low_score"</code> signals. Non-zero scores become <code>"evaluated"</code> signals.
+    Includes question, label, answer, reason, and score as context.</p>
+  </div>
+  <div class="card">
+    <h4>Online + Offline: <code>ConversationSignalDetector</code></h4>
+    <p>Scans <code>Trajectory</code> or raw message lists for patterns:</p>
+    <ul>
+      <li><strong>Execution failures</strong>: regex matches for error/exception/traceback in tool output</li>
+      <li><strong>User corrections</strong>: patterns like "不对", "should be", "actually"</li>
+      <li><strong>Script artifacts</strong>: successful code execution captured as reusable scripts</li>
+      <li><strong>Skill reads</strong>: tracks which SKILL.md files the agent accessed</li>
+      <li><strong>Collaboration signals</strong>: send_message, claim_task, view_task in team context</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="optimizer">8. Optimizers</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/optimizer/</span></p>
+
+<p>Optimizers are dimension-specific strategies that consume signals and trajectories,
+then produce parameter updates. They follow a <strong>backward → step</strong> pattern inspired
+by neural network training:</p>
+
+<div class="flow-box">
+  <div class="flow-step highlight">Signals + Trajectories</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-step">backward() <br><small>analyze failures, generate gradients</small></div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-step">step() <br><small>produce Updates dict</small></div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-step highlight">Updates</div>
+</div>
+
+<div class="layer-box l1">
+<h4>BaseOptimizer</h4>
+<p>Common skeleton for all optimizers:</p>
+<ul>
+  <li><code>bind(operators, targets)</code> — filters operators that expose the target tunables</li>
+  <li><code>add_trajectory()</code> — caches trajectories for analysis</li>
+  <li><code>backward(signals)</code> — analyzes failure signals, generates textual gradients</li>
+  <li><code>step()</code> — produces the <code>Updates</code> dict to apply</li>
+</ul>
+<p>Each optimizer has a <code>domain</code> (e.g., <code>"llm"</code>, <code>"tool"</code>, <code>"skill"</code>)
+and <code>TextualParameter</code> containers holding the generated gradients.</p>
+</div>
+
+<h3>Dimension-Specific Optimizers</h3>
+
+<table>
+  <tr>
+    <th>Optimizer</th>
+    <th>Domain</th>
+    <th>What it optimizes</th>
+    <th>How</th>
+  </tr>
+  <tr>
+    <td><code>InstructionOptimizer</code></td>
+    <td><span class="tag tag-blue">llm</span></td>
+    <td>System prompt, user prompt</td>
+    <td>Uses LLM to generate <em>textual gradients</em> (explanations of why the prompt failed),
+    then rewrites the prompt. All LLM calls happen in <code>backward()</code>;
+    <code>step()</code> returns pre-computed results.</td>
+  </tr>
+  <tr>
+    <td><code>ToolOptimizerBase</code></td>
+    <td><span class="tag tag-teal">tool</span></td>
+    <td>Tool descriptions</td>
+    <td>Two-stage pipeline: (1) generate example interactions, (2) rewrite descriptions.
+    Uses beam search and custom reviewers. Black-box: <code>requires_forward_data() = False</code>.</td>
+  </tr>
+  <tr>
+    <td><code>SkillExperienceOptimizer</code></td>
+    <td><span class="tag tag-yellow">skill</span></td>
+    <td>SKILL.md content (description, body, scripts)</td>
+    <td>Consumes <code>EvolutionSignal</code>s from conversations, uses LLM to generate
+    <code>EvolutionRecord</code>s (patches to skill sections). Scores records by signal type.
+    Supports online and offline modes.</td>
+  </tr>
+  <tr>
+    <td><code>MemoryCallOptimizer</code></td>
+    <td><span class="tag tag-purple">memory</span></td>
+    <td>Memory retrieval parameters</td>
+    <td>Optimizes memory operator tunables.</td>
+  </tr>
+</table>
+
+<!-- ================================================================ -->
+<h2 id="updater">9. Updater (Single-Dim &amp; Multi-Dim)</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/updater/</span></p>
+
+<p>The <code>Updater</code> protocol is the <strong>convergence point</strong> between the Trainer and the Optimizers.
+The Trainer doesn't know about specific optimizer implementations — it only calls <code>updater.update(trajectories, evaluated_cases)</code>.</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>SingleDimUpdater</h4>
+    <p>Wraps a single <code>BaseOptimizer</code>. Flow:</p>
+    <ol>
+      <li>Feed trajectories to the optimizer</li>
+      <li>Convert EvaluatedCases to EvolutionSignals</li>
+      <li>Call <code>optimizer.backward(signals)</code></li>
+      <li>Call <code>optimizer.step()</code> → returns <code>Updates</code></li>
+    </ol>
+  </div>
+  <div class="card">
+    <h4>MultiDimUpdater</h4>
+    <p>Manages multiple domain optimizers (e.g., LLM + Tool + Memory).
+    Performs <strong>attribution/allocation</strong> — distributes bad-case signals to the
+    responsible operator domain — then runs each domain's optimizer independently
+    and merges the resulting Updates.</p>
+  </div>
+</div>
+
+<p>The <code>Updates</code> type is <code>Dict[Tuple[operator_id, target], value]</code> — a flat dictionary
+mapping each (operator, parameter) pair to its new value.</p>
+
+<!-- ================================================================ -->
+<h2 id="trainer">10. Trainer (Orchestrator)</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/trainer/trainer.py</span></p>
+
+<p><code>Trainer</code> is the top-level orchestrator that ties everything together:</p>
+
+<pre>
+trainer = Trainer(
+    updater=SingleDimUpdater(InstructionOptimizer(model_config, client_config)),
+    evaluator=MetricEvaluator([ExactMatchMetric()]),
+    num_parallel=4,
+    early_stop_score=0.95,
+    checkpoint_dir="./checkpoints",
+)
+
+trained_agent = trainer.train(
+    agent=my_agent,
+    train_cases=CaseLoader.from_file("train.json"),
+    val_cases=CaseLoader.from_file("val.json"),
+    num_iterations=10,
+)
+</pre>
+
+<h3>Training Loop Detail</h3>
+
+<ol>
+  <li><strong>Bind</strong>: <code>updater.bind(agent.get_operators())</code> — discovers which operators have tunable parameters</li>
+  <li><strong>Baseline</strong>: Evaluate agent on validation set to get starting score</li>
+  <li><strong>Epoch loop</strong> (up to <code>num_iterations</code>):
+    <ol>
+      <li><strong>Forward</strong>: Run <code>agent.invoke()</code> on each training case (parallel), collect Sessions</li>
+      <li><strong>Evaluate</strong>: Score each prediction against labels</li>
+      <li><strong>Extract</strong>: Convert Sessions to Trajectories</li>
+      <li><strong>Update</strong>: <code>updater.update(trajectories, evaluated_cases)</code> → Updates or candidate list</li>
+      <li><strong>Apply</strong>: Write Updates back to operators via <code>operator.set_parameter(target, value)</code></li>
+      <li><strong>Validate</strong>: Re-evaluate on validation set</li>
+      <li><strong>Checkpoint</strong>: Save if improved</li>
+      <li><strong>Early stop</strong>: Break if score ≥ threshold</li>
+    </ol>
+  </li>
+</ol>
+
+<h3>Candidate Selection</h3>
+<p>If the updater returns <code>List[Updates]</code> (multiple candidates), the Trainer evaluates
+each on the validation set, selects the best, and commits it. Uses operator
+<code>get_state()</code>/<code>load_state()</code> for snapshot-rollback to avoid copying the Agent.</p>
+
+<!-- ================================================================ -->
+<h2 id="checkpointing">11. Checkpointing</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/checkpointing/</span></p>
+
+<table>
+  <tr><th>Type</th><th>Purpose</th></tr>
+  <tr>
+    <td><code>EvolveCheckpoint</code></td>
+    <td>Full training state snapshot for resume: version, run_id, epoch, best score, operator states, updater state</td>
+  </tr>
+  <tr>
+    <td><code>EvolutionRecord</code></td>
+    <td>A single evolution change: source signal, timestamp, <code>EvolutionPatch</code>, score, usage stats, applied status</td>
+  </tr>
+  <tr>
+    <td><code>EvolutionPatch</code></td>
+    <td>One generated change: section, action (append/skip), content, target (description/body/script)</td>
+  </tr>
+  <tr>
+    <td><code>EvolutionLog</code></td>
+    <td>Persisted container of EvolutionRecords for one skill, with pending/applied tracking</td>
+  </tr>
+  <tr>
+    <td><code>PendingChange</code></td>
+    <td>Staged evolution records awaiting user approval before being applied to a skill</td>
+  </tr>
+  <tr>
+    <td><code>PendingSkillCreation</code></td>
+    <td>A proposal for an entirely new skill (name, description, body, reason)</td>
+  </tr>
+</table>
+
+<p><code>FileCheckpointStore</code> handles JSON-based persistence. <code>DefaultCheckpointManager</code>
+controls when to save (every N epochs, on improvement).</p>
+
+<!-- ================================================================ -->
+<h2 id="rl">12. RL Training (agent_rl)</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">agent_evolving/agent_rl/</span></p>
+
+<p>The RL subsystem extends the evolution framework with <strong>reinforcement learning</strong>,
+enabling the underlying LLM itself to be fine-tuned based on agent interaction outcomes.</p>
+
+<h3>Core Data Model</h3>
+
+<div class="diagram">
+<pre>
+                    ┌─────────────────────────────┐
+                    │         RLTask               │
+                    │  task_id, task_sample, round  │
+                    └─────────────┬───────────────┘
+                                  │ Agent executes
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │     RolloutMessage           │
+                    │  ┌─────────────────────────┐ │
+                    │  │ Rollout (per LLM turn)   │ │
+                    │  │  input_prompt (messages) │ │
+                    │  │  output_response         │ │
+                    │  │  input_prompt_ids        │ │
+                    │  │  output_response_ids     │ │
+                    │  └─────────────────────────┘ │
+                    │  reward_list, global_reward   │
+                    └─────────────┬───────────────┘
+                                  │ Tokenized + rewarded
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │     RolloutWithReward        │
+                    │  input_prompt_ids            │
+                    │  output_response_ids         │
+                    │  reward, loss_mask            │
+                    └─────────────────────────────┘
+                                  │
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │     PPO / GRPO Training      │
+                    │  (via Verl framework)        │
+                    └─────────────────────────────┘
+</pre>
+</div>
+
+<h3>Two RL Modes</h3>
+
+<div class="card-grid">
+  <div class="card">
+    <h4><span class="tag tag-blue">Offline RL</span></h4>
+    <p><code>OfflineRLOptimizer</code> + <code>RLRail</code></p>
+    <ul>
+      <li><code>RLRail</code> (extends <code>EvolutionRail</code>) captures trajectories with RL-specific metadata (turn_id, case_id)</li>
+      <li><code>ParallelRuntimeExecutor</code> runs multiple agent instances concurrently to collect rollouts</li>
+      <li><code>TrainingCoordinator</code> manages batch building, encoding, and PPO training</li>
+      <li>Uses Ray for distributed execution, Verl for PPO/GRPO training</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4><span class="tag tag-teal">Online RL</span></h4>
+    <p><code>OnlineRLOptimizer</code> + <code>RLOnlineRail</code></p>
+    <ul>
+      <li><code>RLOnlineRail</code> captures trajectories during live agent operation and uploads to a gateway</li>
+      <li><code>Gateway</code> (HTTP server) receives trajectories, dispatches to judge for reward scoring</li>
+      <li><code>JudgeServer</code> evaluates trajectories and assigns rewards</li>
+      <li><code>OnlineTrainingScheduler</code> triggers PPO training when enough rollouts accumulate</li>
+      <li>Supports LoRA weight updates and hot-swapping</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Reward System</h3>
+<p><code>RewardRegistry</code> is a global registry mapping reward function names to callables.
+Users register custom reward functions via <code>@register_reward("name")</code> decorator.
+The RL pipeline looks up the reward function by name at training time.</p>
+
+<h3>RL Configuration</h3>
+<p><code>RLConfig</code> (Pydantic) covers:</p>
+<ul>
+  <li><code>TrainingConfig</code>: model path, algorithm (GRPO/PPO), batch sizes, GPU config, sequence lengths</li>
+  <li><code>RolloutConfig</code>: learning rate, KL loss, clip ratios, rollout count</li>
+  <li><code>AgentRuntimeConfig</code>: system prompt, temperature, max tokens</li>
+  <li><code>PersistenceConfig</code>: rollout saving, flush intervals</li>
+  <li><code>AdaConfig</code>: optional adaptive rollout variant</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="online">13. Online Evolution (EvolutionRail)</h2>
+<!-- ================================================================ -->
+
+<p><span class="file-ref">harness/rails/evolution/evolution_rail.py</span></p>
+
+<p>Beyond the offline batch pipeline, the framework supports <strong>live evolution during agent operation</strong>
+via the <code>EvolutionRail</code> (a <code>DeepAgentRail</code> that mounts on the agent).</p>
+
+<h3>How It Works</h3>
+
+<div class="flow-box">
+  <div class="flow-step">Agent runs normally<br>(invoke, model_call, tool_call)</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-step highlight">EvolutionRail<br>captures trajectory<br>automatically</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-step">Trigger point fires<br>(after_invoke, after_task_iteration, etc.)</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-step highlight">run_evolution()<br>detect signals<br>generate patches</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-step">Store evolution records<br>(EvolutionLog)</div>
+</div>
+
+<p>Key features:</p>
+<ul>
+  <li><strong>Automatic trajectory collection</strong>: The base class handles all lifecycle hooks and builds Trajectory objects</li>
+  <li><strong>Configurable trigger</strong>: Evolution can fire after invoke, after each model call, after each tool call, or after each task iteration</li>
+  <li><strong>Async evolution</strong>: By default, <code>run_evolution()</code> runs in a background task to avoid blocking the agent</li>
+  <li><strong>Subclass extension points</strong>: <code>_on_before_invoke</code>, <code>_on_after_model_call</code>, <code>_on_after_tool_call</code>, <code>_on_after_invoke</code>, <code>run_evolution</code></li>
+</ul>
+
+<p>Two concrete subclasses are used in production:</p>
+<ul>
+  <li><code>SkillEvolutionRail</code> — runs <code>SkillExperienceOptimizer</code> on captured trajectories to evolve skill content</li>
+  <li><code>TrajectoryRail</code> — stores trajectories for later batch analysis</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="putting-it-together">14. Putting It All Together</h2>
+<!-- ================================================================ -->
+
+<h3>Offline Evolution Example</h3>
+<pre>
+# 1. Define evaluation cases
+cases = CaseLoader.from_list([
+    Case(inputs={"query": "Fix the login bug"}, label={"answer": "Bug fixed in auth.py"}),
+    Case(inputs={"query": "Add unit tests"}, label={"answer": "3 tests added"}),
+])
+
+# 2. Create optimizer + evaluator
+optimizer = InstructionOptimizer(model_config=..., model_client_config=...)
+evaluator = MetricEvaluator([ExactMatchMetric(), LLMAsJudgeMetric(...)])
+
+# 3. Create trainer
+trainer = Trainer(
+    updater=SingleDimUpdater(optimizer),
+    evaluator=evaluator,
+    num_parallel=4,
+    checkpoint_dir="./evolve_checkpoints",
+)
+
+# 4. Run evolution
+trained_agent = trainer.train(
+    agent=my_agent,
+    train_cases=cases,
+    num_iterations=5,
+)
+# Agent's system prompt has been optimized based on failure analysis
+</pre>
+
+<h3>Online Evolution Flow</h3>
+<pre>
+# EvolutionRail is mounted on the agent during construction
+# (via DeepAgentConfig or TeamAgentSpec)
+
+# During normal operation:
+#   1. User sends a query
+#   2. Agent processes it (LLM calls + tool calls)
+#   3. EvolutionRail captures the full trajectory
+#   4. After invoke completes, run_evolution() fires:
+#      - ConversationSignalDetector scans for failures/corrections
+#      - SkillExperienceOptimizer generates EvolutionRecords
+#      - Records are stored in EvolutionLog
+#      - Pending changes await user approval
+#   5. Next invocation benefits from the evolved skill content
+</pre>
+
+<h3>RL Training Flow</h3>
+<pre>
+# 1. Configure RL
+config = RLConfig(
+    training=TrainingConfig(
+        model_path="/path/to/base_model",
+        algorithm_adv_estimator="grpo",
+        train_batch_size=32,
+    ),
+)
+
+# 2. Create optimizer
+optimizer = OfflineRLOptimizer(config)
+optimizer.set_task_data_fn(my_task_generator)
+optimizer.set_reward_fn("my_reward")
+
+# 3. Run training (collects rollouts via ParallelRuntimeExecutor, trains via Verl PPO)
+optimizer.train()
+</pre>
+
+<div class="card" style="margin-top: 2rem;">
+  <h4>Key Design Principles</h4>
+  <ul>
+    <li><strong>Operator abstraction</strong>: All evolvable parameters are exposed via <code>Operator.get_tunables()</code>. Optimizers never touch the agent directly.</li>
+    <li><strong>Updater as convergence point</strong>: Trainer only knows about <code>Updater.update()</code>. Single-dim and multi-dim are interchangeable.</li>
+    <li><strong>Signal-driven</strong>: Optimization is triggered by detected signals (failures, corrections, low scores), not blindly applied.</li>
+    <li><strong>Candidate selection</strong>: When multiple update candidates exist, the best is selected via validation — no risky untested changes.</li>
+    <li><strong>Checkpoint &amp; resume</strong>: Full state persistence enables long-running evolution jobs to be interrupted and resumed.</li>
+    <li><strong>Rail-based online evolution</strong>: Zero overhead when not active; seamless integration with the existing Rail lifecycle system.</li>
+  </ul>
+</div>
+
+</body>
+</html>

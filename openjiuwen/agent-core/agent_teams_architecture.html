@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>openjiuwen.agent_teams &mdash; Architecture Deep-Dive</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242734;
+    --border: #2e3244;
+    --text: #e1e4ed;
+    --text-dim: #8b90a5;
+    --accent: #6c8cff;
+    --accent2: #48d1a0;
+    --accent3: #f0a858;
+    --accent4: #e06c8cff;
+    --leader: #6c8cff;
+    --teammate: #48d1a0;
+    --human: #f0a858;
+    --code-bg: #12141c;
+    --code-border: #2a2d3a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 3rem;
+  }
+  .hero h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: .5rem;
+  }
+  .hero p { color: var(--text-dim); font-size: 1.1rem; max-width: 700px; margin: 0 auto; }
+
+  /* Section headings */
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: .4rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 1.8rem 0 .6rem;
+    color: var(--text);
+  }
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.2rem 0 .4rem;
+    color: var(--text-dim);
+  }
+  p { margin-bottom: .8rem; }
+  ul, ol { margin: .5rem 0 .8rem 1.5rem; }
+  li { margin-bottom: .3rem; }
+
+  /* Code */
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: .88em;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 4px;
+    padding: .1em .35em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin: .8rem 0 1.2rem;
+    font-size: .85rem;
+    line-height: 1.6;
+  }
+  pre code { background: none; border: none; padding: 0; }
+
+  /* Diagrams */
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.2rem 0;
+    overflow-x: auto;
+  }
+  .diagram pre {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: .82rem;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: .8rem 0 1.2rem;
+    font-size: .9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: .55rem .8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: var(--surface);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  td { color: var(--text-dim); }
+  td code { font-size: .82em; }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0 1.5rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+  }
+  .card h4 { margin: 0 0 .4rem; color: var(--accent); font-size: .95rem; }
+  .card p { font-size: .85rem; color: var(--text-dim); margin: 0; }
+
+  /* Role badges */
+  .badge {
+    display: inline-block;
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .15em .55em;
+    border-radius: 4px;
+    margin-right: .3em;
+  }
+  .badge-leader { background: rgba(108,140,255,.15); color: var(--leader); }
+  .badge-teammate { background: rgba(72,209,160,.15); color: var(--teammate); }
+  .badge-human { background: rgba(240,168,88,.15); color: var(--human); }
+
+  /* Flow arrow */
+  .flow { color: var(--accent); font-weight: bold; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc h3 { margin: 0 0 .6rem; font-size: 1rem; color: var(--accent); }
+  .toc ol { margin: 0; padding-left: 1.3rem; }
+  .toc li { margin-bottom: .2rem; }
+  .toc a { color: var(--text-dim); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  .note {
+    background: rgba(108,140,255,.08);
+    border-left: 3px solid var(--accent);
+    padding: .7rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: .8rem 0;
+    font-size: .9rem;
+    color: var(--text-dim);
+  }
+
+  .src { color: var(--text-dim); font-size: .8rem; font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ==================== HERO ==================== -->
+<div class="hero">
+  <h1>openjiuwen.agent_teams</h1>
+  <p>Multi-agent team orchestration &mdash; a deep-dive into how the framework
+  coordinates autonomous agents that collaborate through tasks, messages, and events.</p>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#core-concepts">Core Concepts</a></li>
+    <li><a href="#lifecycle">Team Lifecycle</a></li>
+    <li><a href="#specs">Specifications (Specs)</a></li>
+    <li><a href="#teamagent">TeamAgent</a></li>
+    <li><a href="#coordination">Coordination Kernel &amp; Event Bus</a></li>
+    <li><a href="#messaging">Messager Transport</a></li>
+    <li><a href="#tools">Team Tools</a></li>
+    <li><a href="#runtime">Runtime Manager &amp; Dispatch</a></li>
+    <li><a href="#spawn">Spawn Modes</a></li>
+    <li><a href="#interaction">External Interaction</a></li>
+    <li><a href="#harness">TeamHarness &amp; DeepAgent</a></li>
+    <li><a href="#events">Event Catalog</a></li>
+    <li><a href="#modules">Module Map</a></li>
+    <li><a href="#data-flow">End-to-End Data Flow</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 1. OVERVIEW ==================== -->
+<h2 id="overview">1. Overview</h2>
+<p>
+  <code>openjiuwen.agent_teams</code> is a framework for orchestrating
+  <strong>multi-agent teams</strong> where a <em>leader</em> agent coordinates
+  one or more <em>teammate</em> agents (and optionally <em>human-agent</em>
+  avatars) to collaboratively solve complex tasks. Teams communicate through
+  a database-backed task board, point-to-point messaging, and a pub/sub event bus.
+</p>
+<p>
+  The design separates <strong>specification</strong> (JSON-serializable blueprints)
+  from <strong>runtime</strong> (live agent processes, event loops, messager
+  transports), enabling both in-process and cross-process deployment.
+</p>
+
+<div class="diagram">
+<pre>
+  ┌─────────────────────────────────────────────────────────────┐
+  │                     External Caller                         │
+  │          (Runner / CLI / SDK / TeamRuntimeManager)          │
+  └──────────────┬──────────────────────────────┬───────────────┘
+                 │ activate()                    │ interact()
+                 ▼                              ▼
+  ┌──────────────────────────┐   ┌──────────────────────────┐
+  │      TeamRuntimePool     │   │    Interaction Gate       │
+  │  (in-process registry)   │   │  (concurrency control)   │
+  └──────────────┬───────────┘   └──────────────┬───────────┘
+                 │                              │
+                 ▼                              ▼
+  ┌──────────────────────────────────────────────────────────┐
+  │                    TeamAgent (Leader)                      │
+  │  ┌─────────────┐ ┌──────────────┐ ┌───────────────────┐  │
+  │  │ Coordination │ │   Stream     │ │  Spawn / Recovery │  │
+  │  │   Kernel     │ │  Controller  │ │    Managers       │  │
+  │  └──────┬──────┘ └──────┬───────┘ └────────┬──────────┘  │
+  │         │               │                   │             │
+  │  ┌──────▼───────────────▼───────────────────▼──────────┐  │
+  │  │                  TeamHarness                         │  │
+  │  │        (adapter to DeepAgent runtime)                │  │
+  │  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │  │
+  │  │  │ DeepAgent│  │ TeamRails│  │   Team Tools     │   │  │
+  │  │  │  (LLM)   │  │(policy,  │  │ (build_team,     │   │  │
+  │  │  │          │  │ tool, …) │  │  send_message,…) │   │  │
+  │  │  └──────────┘  └──────────┘  └──────────────────┘   │  │
+  │  └─────────────────────────────────────────────────────┘  │
+  └──────────────────────────────────────────────────────────┘
+           │                    ▲                    │
+           │ Messager (events)  │ Messager (events)  │ spawn
+           ▼                    │                    ▼
+  ┌─────────────────┐  ┌───────┴────────┐  ┌─────────────────┐
+  │  TeamAgent #2   │  │ TeamAgent #3   │  │  TeamAgent #N   │
+  │  (Teammate)     │  │ (Teammate)     │  │ (Human-Agent)   │
+  └─────────────────┘  └────────────────┘  └─────────────────┘
+</pre>
+</div>
+
+<!-- ==================== 2. CORE CONCEPTS ==================== -->
+<h2 id="core-concepts">2. Core Concepts</h2>
+
+<h3>2.1 Roles</h3>
+<div class="card-grid">
+  <div class="card">
+    <h4><span class="badge badge-leader">LEADER</span> Leader</h4>
+    <p>Owns the team. Creates tasks, spawns/shuts down teammates, approves plans
+    and tool calls, broadcasts instructions. Runs the coordination kernel that
+    subscribes to all team events.</p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-teammate">TEAMMATE</span> Teammate</h4>
+    <p>An autonomous agent spawned by the leader. Claims tasks, executes work,
+    sends messages. Waits for first-iteration gate before polling its mailbox.
+    Can run in-process or as a subprocess.</p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-human">HUMAN_AGENT</span> Human-Agent</h4>
+    <p>A first-class member representing an external human collaborator. Has a
+    DeepAgent runtime driven by <code>HumanAgentInbox</code>. Limited tool set
+    (view_task, member_complete_task). Enabled via HITT (Human-in-the-Team).</p>
+  </div>
+</div>
+
+<h3>2.2 Team Lifecycle</h3>
+<table>
+  <tr><th>Mode</th><th>Description</th></tr>
+  <tr><td><code>TEMPORARY</code></td><td>Team is created, runs one round, then shuts down and cleans up. Default.</td></tr>
+  <tr><td><code>PERSISTENT</code></td><td>Team pauses between rounds instead of shutting down. Can be resumed via <code>activate()</code> with <code>RESUME_FROM_PAUSE</code>.</td></tr>
+</table>
+
+<h3>2.3 Team Modes</h3>
+<table>
+  <tr><th>Mode</th><th>Description</th></tr>
+  <tr><td><code>default</code></td><td>Leader spawns teammates dynamically via <code>spawn_member</code> tool.</td></tr>
+  <tr><td><code>predefined</code></td><td>All teammates declared upfront in <code>predefined_members</code>; no dynamic spawn.</td></tr>
+  <tr><td><code>hybrid</code></td><td>Predefined members exist, but the leader can still spawn additional teammates at runtime.</td></tr>
+</table>
+
+<h3>2.4 Teammate Execution Modes</h3>
+<table>
+  <tr><th>Mode</th><th>Description</th></tr>
+  <tr><td><code>build_mode</code></td><td>Teammates execute tasks immediately. Leader does not approve plans or tool calls. Default.</td></tr>
+  <tr><td><code>plan_mode</code></td><td>Teammates submit plans for leader approval before executing. Tool calls can be intercepted for leader sign-off.</td></tr>
+</table>
+
+<!-- ==================== 3. LIFECYCLE ==================== -->
+<h2 id="lifecycle">3. Team Lifecycle</h2>
+
+<div class="diagram">
+<pre>
+  ┌─────────┐    spec.build()    ┌──────────┐   activate()   ┌──────────┐
+  │  Spec    │ ───────────────▶  │ TeamAgent│ ─────────────▶ │ RUNNING  │
+  │ (JSON)   │                   │ (Leader) │                │          │
+  └─────────┘                    └──────────┘                └────┬─────┘
+                                                                    │
+                                         ┌─────────────────────────┤
+                                         │                         │
+                                         ▼                         ▼
+                                  ┌──────────────┐         ┌──────────────┐
+                                  │   PAUSED     │         │  SHUTDOWN    │
+                                  │ (persistent) │         │ (temporary)  │
+                                  └──────┬───────┘         └──────┬───────┘
+                                         │                        │
+                                         │ resume                 │ clean
+                                         ▼                        ▼
+                                  ┌──────────────┐         ┌──────────────┐
+                                  │   RUNNING    │         │   CLEANED    │
+                                  └──────────────┘         └──────────────┘
+</pre>
+</div>
+
+<h3>3.1 Dispatch Decision Table</h3>
+<p>The runtime manager resolves each <code>activate()</code> call into a
+<code>RunAction</code> based on the state of three signals:</p>
+<ul>
+  <li><strong>team_in_db</strong> &mdash; does the static team table have a row?</li>
+  <li><strong>team_in_session</strong> &mdash; does the session checkpoint have a bucket?</li>
+  <li><strong>pool_entry</strong> &mdash; is there a live runtime in the pool?</li>
+</ul>
+
+<table>
+  <tr><th>team_in_db</th><th>team_in_session</th><th>pool_entry</th><th>Action</th></tr>
+  <tr><td>No</td><td>No</td><td>None</td><td><code>CREATE</code></td></tr>
+  <tr><td>No</td><td>No</td><td>present</td><td><code>REJECT_INCONSISTENT</code></td></tr>
+  <tr><td>No</td><td>Yes</td><td>&mdash;</td><td><code>REJECT_ORPHANED</code></td></tr>
+  <tr><td>Yes</td><td>No</td><td>None</td><td><code>NEW_TEAM_IN_SESSION</code></td></tr>
+  <tr><td>Yes</td><td>Yes</td><td>None</td><td><code>COLD_RECOVER</code></td></tr>
+  <tr><td>Yes</td><td>Yes</td><td>same session, RUNNING</td><td><code>REJECT_RUNNING</code></td></tr>
+  <tr><td>Yes</td><td>Yes</td><td>same session, PAUSED</td><td><code>RESUME_FROM_PAUSE</code></td></tr>
+  <tr><td>Yes</td><td>Yes</td><td>different session</td><td><code>WARM_RECOVER</code></td></tr>
+  <tr><td>Yes</td><td>No</td><td>present</td><td><code>NEW_TEAM_IN_SESSION_WARM</code></td></tr>
+</table>
+
+<!-- ==================== 4. SPECS ==================== -->
+<h2 id="specs">4. Specifications (Specs)</h2>
+<p>All configuration is expressed as Pydantic <code>BaseModel</code> instances that
+round-trip through JSON. This makes specs transportable across process boundaries
+and persistable in session checkpoints.</p>
+
+<h3>4.1 Spec Hierarchy</h3>
+<div class="diagram">
+<pre>
+  TeamAgentSpec                         Top-level: composes everything
+  ├── agents: dict[str, DeepAgentSpec]  Per-role agent specs ("leader", "teammate")
+  ├── leader: LeaderSpec                Leader identity (name, persona, model_name)
+  ├── predefined_members: list[TeamMemberSpec]  Pre-declared teammates
+  ├── model_pool: list[ModelPoolEntry]  Shared LLM endpoint pool
+  ├── model_router: ModelRouterConfig   Single-endpoint router (alternative to pool)
+  ├── model_pool_strategy               "round_robin" | "by_model_name" | "router"
+  ├── transport: TransportSpec          Messager backend ("inprocess" | "pyzmq")
+  ├── storage: StorageSpec              Database backend ("sqlite" | "postgresql" | "memory" | ...)
+  ├── worktree: WorktreeConfig          Git worktree isolation
+  ├── workspace: TeamWorkspaceConfig    Shared workspace config
+  ├── memory: TeamMemoryConfig          Per-member memory isolation
+  ├── spawn_mode                        "inprocess" | "process"
+  ├── teammate_mode                     "build_mode" | "plan_mode"
+  ├── team_mode                         "default" | "predefined" | "hybrid"
+  ├── lifecycle                         "temporary" | "persistent"
+  ├── enable_hitt: bool                 Human-in-the-Team capability ceiling
+  ├── language: str                     Prompt locale ("cn" | "en")
+  └── agent_customizer: Callable        In-process hook for platform adapters
+
+  DeepAgentSpec                         Per-role agent definition
+  ├── model: TeamModelConfig            LLM model (client + request config)
+  ├── card: AgentCard                   Identity metadata
+  ├── system_prompt: str                System prompt
+  ├── tools: list[ToolCard | BuiltinToolSpec]
+  ├── rails: list[RailSpec]             Behavioral rails
+  ├── subagents: list[SubAgentSpec]     Nested sub-agents
+  ├── workspace: WorkspaceSpec          Workspace root + language
+  ├── sys_operation: SysOperationSpec   Filesystem / sandbox config
+  ├── progressive_tool: ProgressiveToolSpec
+  ├── approval_required_tools           Tools needing leader approval
+  └── ... (vision, audio, skills, etc.)
+
+  TeamSpec                              Runtime team definition (built from TeamAgentSpec)
+  ├── team_name, display_name
+  ├── leader_member_name
+  ├── model_pool + model_pool_strategy
+  └── language, metadata
+
+  TeamRuntimeContext                    Per-member runtime context
+  ├── role: TeamRole
+  ├── member_name, persona
+  ├── team_spec: TeamSpec
+  ├── messager_config, db_config
+  └── member_model: TeamModelConfig     Allocator-assigned model
+</pre>
+</div>
+
+<h3>4.2 Build Pipeline</h3>
+<p>Calling <code>TeamAgentSpec.build()</code> performs:</p>
+<ol>
+  <li>Validate reserved names and HITT consistency</li>
+  <li>Resolve language defaults</li>
+  <li>Expand <code>model_router</code> into flat <code>model_pool</code> (if set)</li>
+  <li>Build <code>TeamSpec</code>, messager config, and DB config</li>
+  <li>Allocate leader model from pool</li>
+  <li>Construct <code>TeamAgent</code> and call <code>configure(spec, context)</code></li>
+</ol>
+<p>Source: <span class="src">openjiuwen/agent_teams/schema/blueprint.py:332-413</span></p>
+
+<!-- ==================== 5. TEAMAGENT ==================== -->
+<h2 id="teamagent">5. TeamAgent</h2>
+<p><code>TeamAgent</code> is the central class &mdash; one instance per member
+(leader, teammate, or human-agent). It extends <code>BaseAgent</code> and uses
+composition to delegate to specialized managers:</p>
+
+<table>
+  <tr><th>Component</th><th>Responsibility</th></tr>
+  <tr><td><code>AgentConfigurator</code></td><td>Infra setup, agent setup, spec resolution, workspace/worktree creation</td></tr>
+  <tr><td><code>CoordinationKernel</code></td><td>Event bus lifecycle, transport subscription, user-input routing</td></tr>
+  <tr><td><code>StreamController</code></td><td>Streaming queue, round start/stop, cancel, steer, follow-up</td></tr>
+  <tr><td><code>SpawnManager</code></td><td>Teammate spawning (in-process), handle tracking, DB context building</td></tr>
+  <tr><td><code>RecoveryManager</code></td><td>Team recovery from checkpoints, leader config persistence</td></tr>
+  <tr><td><code>SessionManager</code></td><td>Session binding, session switching, checkpoint lifecycle</td></tr>
+  <tr><td><code>TeamHarness</code></td><td>Adapter to the underlying DeepAgent (LLM runtime)</td></tr>
+</table>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/agent/team_agent.py</span></p>
+
+<h3>5.1 Key Methods</h3>
+<table>
+  <tr><th>Method</th><th>Description</th></tr>
+  <tr><td><code>configure(spec, context)</code></td><td>Wire up infra + agent; called once at construction</td></tr>
+  <tr><td><code>invoke(inputs)</code></td><td>Blocking invocation; returns final result</td></tr>
+  <tr><td><code>stream(inputs)</code></td><td>Async generator yielding <code>TeamOutputSchema</code> chunks</td></tr>
+  <tr><td><code>deliver_input(content)</code></td><td>Route input: steer if running, queue if transitioning, start if idle</td></tr>
+  <tr><td><code>spawn_teammate(ctx)</code></td><td>Spawn a new teammate agent</td></tr>
+  <tr><td><code>destroy_team()</code></td><td>Cancel + stop coordination + force-clean</td></tr>
+  <tr><td><code>broadcast(content)</code></td><td>Broadcast a user-side announcement</td></tr>
+  <tr><td><code>human_agent_say(content)</code></td><td>Speak as a human-agent avatar</td></tr>
+</table>
+
+<!-- ==================== 6. COORDINATION ==================== -->
+<h2 id="coordination">6. Coordination Kernel &amp; Event Bus</h2>
+<p>The <code>CoordinationKernel</code> owns the internal <code>EventBus</code>
+and <code>EventDispatcher</code>. It manages the coordination lifecycle:</p>
+
+<div class="diagram">
+<pre>
+  start()                         pause() / stop()
+  ─────────────────────────────   ─────────────────────────────
+  1. Initialize DB                1. Drain agent task
+  2. Bind session                 2. Persist allocator state
+  3. Recover team (if needed)     3. Mark teammates PAUSED (leader only)
+  4. Init workspace               4. Publish STANDBY event (pause only)
+  5. Init memory toolkit          5. Unsubscribe transport
+  6. Set status → READY           6. Stop event bus
+  7. Start event bus              7. Close stream
+  8. Subscribe messager           8. Release session
+</pre>
+</div>
+
+<h3>6.1 Inner Events</h3>
+<p>The event bus processes two internal event types:</p>
+<ul>
+  <li><code>USER_INPUT</code> &mdash; external input enqueued by <code>invoke()</code> / <code>stream()</code></li>
+  <li><code>POLL_MAILBOX</code> &mdash; triggers the dispatcher to check for pending messages (teammates only, after first iteration)</li>
+</ul>
+
+<h3>6.2 Dispatcher</h3>
+<p>The <code>EventDispatcher</code> is bound as the event bus wake callback.
+When the bus wakes (new event arrives), the dispatcher:</p>
+<ol>
+  <li>Processes all pending inner events</li>
+  <li>Processes all pending external events (from messager)</li>
+  <li>Handles member lifecycle, message delivery, task board updates, tool approvals</li>
+</ol>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/agent/coordination/</span></p>
+
+<!-- ==================== 7. MESSAGING ==================== -->
+<h2 id="messaging">7. Messager Transport</h2>
+<p>The messager provides two communication primitives:</p>
+<ul>
+  <li><strong>Pub/Sub</strong> &mdash; topic-based fan-out (team events, broadcasts)</li>
+  <li><strong>Point-to-Point</strong> &mdash; direct message delivery to a specific agent</li>
+</ul>
+
+<h3>7.1 Backends</h3>
+<div class="card-grid">
+  <div class="card">
+    <h4>InProcessMessager</h4>
+    <p>Process-global <code>_Bus</code> singleton with handler-based routing.
+    No serialization. Used when <code>spawn_mode="inprocess"</code>.</p>
+  </div>
+  <div class="card">
+    <h4>PyZmqMessager</h4>
+    <p>ZeroMQ-based transport for cross-process communication.
+    Used when <code>spawn_mode="process"</code>. Requires <code>pyzmq</code> extra.</p>
+  </div>
+</div>
+
+<h3>7.2 Topic Routing</h3>
+<p>Topics follow the pattern:</p>
+<pre><code>session:{session_id}:team:{team_name}:{topic}</code></pre>
+<p>Three topic categories exist: <code>TEAM</code>, <code>TASK</code>, <code>MESSAGE</code>.
+Each member subscribes to all three; self-published events are filtered by <code>sender_id</code>.</p>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/messager/</span></p>
+
+<!-- ==================== 8. TOOLS ==================== -->
+<h2 id="tools">8. Team Tools</h2>
+<p>Team tools are the LLM-callable functions that give agents control over the team.
+They are distributed by role:</p>
+
+<h3>8.1 Tool Permission Matrix</h3>
+<table>
+  <tr>
+    <th>Tool</th>
+    <th><span class="badge badge-leader">Leader</span></th>
+    <th><span class="badge badge-teammate">Teammate</span></th>
+    <th><span class="badge badge-human">Human-Agent</span></th>
+  </tr>
+  <tr><td><code>build_team</code></td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>clean_team</code></td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>spawn_member</code></td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>shutdown_member</code></td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>approve_plan</code></td><td>Yes (plan_mode)</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>approve_tool</code></td><td>Yes (plan_mode)</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>create_task</code></td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>update_task</code></td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>list_members</code></td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>view_task</code></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+  <tr><td><code>send_message</code></td><td>Yes</td><td>Yes</td><td>&mdash;</td></tr>
+  <tr><td><code>claim_task</code></td><td>&mdash;</td><td>Yes</td><td>&mdash;</td></tr>
+  <tr><td><code>member_complete_task</code></td><td>&mdash;</td><td>&mdash;</td><td>Yes</td></tr>
+  <tr><td><code>workspace_meta</code></td><td>Yes</td><td>Yes</td><td>via rail</td></tr>
+</table>
+
+<h3>8.2 Task Board</h3>
+<p>Tasks follow a status machine:</p>
+<div class="diagram">
+<pre>
+  PENDING ──▶ CLAIMED ──▶ PLAN_APPROVED ──▶ COMPLETED
+    │            │
+    │            └──▶ (reset to PENDING on cancel)
+    │
+    └──▶ CANCELLED
+
+  Dependencies: depends_on / depended_by edges control claimability.
+  A task is claimable only when all its depends_on tasks are COMPLETED.
+</pre>
+</div>
+
+<h3>8.3 Messaging</h3>
+<p><code>send_message</code> supports three modes:</p>
+<ul>
+  <li><strong>Point-to-point</strong>: <code>to="member_name"</code></li>
+  <li><strong>Broadcast</strong>: <code>to="*"</code></li>
+  <li><strong>Multicast</strong>: <code>to=["m1", "m2"]</code></li>
+</ul>
+<p>Messages are persisted in the database and delivered via the messager event bus.
+When the leader sends a message, unstarted teammates are auto-started.</p>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/tools/team_tools.py</span></p>
+
+<!-- ==================== 9. RUNTIME MANAGER ==================== -->
+<h2 id="runtime">9. Runtime Manager &amp; Dispatch</h2>
+<p><code>TeamRuntimeManager</code> is the process-level owner of the
+<code>TeamRuntimePool</code>. It provides the public API for the SDK / CLI:</p>
+
+<table>
+  <tr><th>Method</th><th>Description</th></tr>
+  <tr><td><code>activate(spec, session)</code></td><td>Dispatch + materialize a team (create / recover / resume)</td></tr>
+  <tr><td><code>interact(payload)</code></td><td>Route an interact payload to the active team (god-view / operator / human-agent)</td></tr>
+  <tr><td><code>pause(team_name, session_id)</code></td><td>Pause the active runtime</td></tr>
+  <tr><td><code>stop_team(team_name, session_id)</code></td><td>Tear down the active runtime</td></tr>
+  <tr><td><code>delete_team(team_name, session_ids)</code></td><td>Delete all persisted state + filesystem</td></tr>
+  <tr><td><code>list_active_teams()</code></td><td>Read-only snapshots of all pooled teams</td></tr>
+  <tr><td><code>get_monitor(team_name, session_id)</code></td><td>TeamMonitor for status observation</td></tr>
+</table>
+
+<h3>9.1 Interaction Gate</h3>
+<p>Each <code>ActiveTeam</code> owns an <code>InteractGate</code> that enforces
+the run/interact concurrency contract:</p>
+<ul>
+  <li>While a run is in flight, <code>interact()</code> payloads are admitted through the gate</li>
+  <li>When the run is about to exit, the gate closes and waits for in-flight payloads to drain</li>
+  <li>State machine: <code>OPEN</code> &rarr; <code>CLOSING</code> &rarr; <code>DRAINED</code></li>
+</ul>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/runtime/manager.py</span>,
+<span class="src">openjiuwen/agent_teams/runtime/gate.py</span></p>
+
+<!-- ==================== 10. SPAWN ==================== -->
+<h2 id="spawn">10. Spawn Modes</h2>
+
+<h3>10.1 In-Process Spawn</h3>
+<p>When <code>spawn_mode="inprocess"</code>, teammates run as <code>asyncio.Task</code>s
+in the leader's event loop. The <code>InProcessSpawnHandle</code> wraps the task
+and provides a reference to the teammate's <code>TeamAgent</code> for direct access.</p>
+
+<div class="diagram">
+<pre>
+  Leader Event Loop
+  ┌────────────────────────────────────────────┐
+  │                                            │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
+  │  │ Leader   │  │ Teammate │  │ Teammate │ │
+  │  │ DeepAgent│  │ #1 Task  │  │ #2 Task  │ │
+  │  └──────────┘  └──────────┘  └──────────┘ │
+  │                                            │
+  │  InProcessMessager (shared _Bus singleton) │
+  └────────────────────────────────────────────┘
+</pre>
+</div>
+
+<h3>10.2 Process Spawn</h3>
+<p>When <code>spawn_mode="process"</code>, teammates run in separate OS processes.
+Communication goes through <code>PyZmqMessager</code>. The leader serializes the
+<code>TeamAgentSpec</code> + <code>TeamRuntimeContext</code> into a spawn payload
+that the child process deserializes via <code>TeamAgent.from_spawn_payload()</code>.</p>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/spawn/</span></p>
+
+<!-- ==================== 11. INTERACTION ==================== -->
+<h2 id="interaction">11. External Interaction</h2>
+<p>The framework exposes two parallel input channels for external callers:</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>UserInbox</h4>
+    <p>Delivers input to the leader's DeepAgent by default.
+    Supports <code>@member_name</code> routing to bypass the leader
+    and post directly to a specific teammate. Also supports broadcast.</p>
+  </div>
+  <div class="card">
+    <h4>HumanAgentInbox</h4>
+    <p>Dispatches input as a <code>send_message</code> from the
+    human-agent avatar. Only available when HITT is enabled.
+    Supports <code>@target</code> routing and team-side callbacks.</p>
+  </div>
+</div>
+
+<h3>11.1 Interact Payload Types</h3>
+<table>
+  <tr><th>Type</th><th>Routing</th><th>Description</th></tr>
+  <tr><td><code>GodViewMessage</code></td><td>Leader DeepAgent</td><td>Talk straight to the leader's LLM</td></tr>
+  <tr><td><code>OperatorMessage</code></td><td>Target member or broadcast</td><td>SDK-level operator control</td></tr>
+  <tr><td><code>HumanAgentMessage</code></td><td>From human-agent to target</td><td>User voice through avatar</td></tr>
+</table>
+
+<h3>11.2 String Parsing</h3>
+<p>Free-form string inputs are parsed by <code>parse_interact_str</code>:</p>
+<ul>
+  <li><code># body</code> &rarr; <code>GodViewMessage</code></li>
+  <li><code>$&lt;name&gt; body</code> &rarr; <code>HumanAgentMessage</code></li>
+  <li><code>@member body</code> &rarr; targeted delivery</li>
+  <li>No prefix &rarr; <code>GodViewMessage</code></li>
+</ul>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/interaction/</span></p>
+
+<!-- ==================== 12. HARNESS ==================== -->
+<h2 id="harness">12. TeamHarness &amp; DeepAgent</h2>
+<p><code>TeamHarness</code> is the sole adapter between <code>TeamAgent</code>
+and the underlying <code>DeepAgent</code> runtime. All construction, rail mounting,
+and runtime calls flow through it.</p>
+
+<h3>12.1 Rail Mount Order</h3>
+<ol>
+  <li><code>TeamToolRail</code> &mdash; injects team tools into the agent's ability set</li>
+  <li><code>TeamPolicyRail</code> &mdash; enforces team-level behavioral policies</li>
+  <li><code>FirstIterationGate</code> &mdash; blocks mailbox polling until first iteration completes (teammates)</li>
+  <li><code>TeamWorkspaceRail</code> &mdash; workspace lock management and version control</li>
+  <li><code>TeamToolApprovalRail</code> &mdash; intercepts tool calls for leader approval (plan_mode)</li>
+</ol>
+
+<h3>12.2 DeepAgentSpec.build()</h3>
+<p>Each role's <code>DeepAgentSpec</code> materializes into a live <code>DeepAgent</code>
+with its own model, tools, rails, subagents, workspace, and sys_operation.
+The harness wraps this and exposes only the operations that <code>TeamAgent</code> needs:</p>
+<ul>
+  <li><code>steer()</code>, <code>follow_up()</code> &mdash; mid-execution input</li>
+  <li><code>abort()</code> &mdash; cooperative cancellation</li>
+  <li><code>run_streaming()</code> &mdash; chunk-by-chunk output iterator</li>
+  <li><code>register_rail()</code> / <code>unregister_rail()</code> &mdash; dynamic rail management</li>
+</ul>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/harness.py</span></p>
+
+<!-- ==================== 13. EVENTS ==================== -->
+<h2 id="events">13. Event Catalog</h2>
+<p>All cross-member communication uses typed events. Each event is a Pydantic model
+that serializes to JSON for cross-process transport.</p>
+
+<table>
+  <tr><th>Category</th><th>Events</th></tr>
+  <tr>
+    <td>Team Lifecycle</td>
+    <td><code>CREATED</code>, <code>CLEANED</code>, <code>STANDBY</code></td>
+  </tr>
+  <tr>
+    <td>Member Lifecycle</td>
+    <td><code>MEMBER_SPAWNED</code>, <code>MEMBER_RESTARTED</code>,
+        <code>MEMBER_STATUS_CHANGED</code>, <code>MEMBER_EXECUTION_CHANGED</code>,
+        <code>MEMBER_SHUTDOWN</code>, <code>MEMBER_CANCELED</code></td>
+  </tr>
+  <tr>
+    <td>Collaboration</td>
+    <td><code>PLAN_APPROVAL</code>, <code>TOOL_APPROVAL_RESULT</code></td>
+  </tr>
+  <tr>
+    <td>Messaging</td>
+    <td><code>MESSAGE</code>, <code>BROADCAST</code></td>
+  </tr>
+  <tr>
+    <td>Tasks</td>
+    <td><code>TASK_CREATED</code>, <code>TASK_UPDATED</code>,
+        <code>TASK_CLAIMED</code>, <code>TASK_COMPLETED</code>,
+        <code>TASK_CANCELLED</code>, <code>TASK_UNBLOCKED</code></td>
+  </tr>
+  <tr>
+    <td>Worktree</td>
+    <td><code>WORKTREE_CREATED</code>, <code>WORKTREE_REMOVED</code></td>
+  </tr>
+  <tr>
+    <td>Workspace</td>
+    <td><code>WORKSPACE_ARTIFACT_UPDATED</code>, <code>WORKSPACE_CONFLICT</code>,
+        <code>WORKSPACE_LOCK_REQUEST</code>, <code>WORKSPACE_LOCK_RESPONSE</code></td>
+  </tr>
+</table>
+
+<p>Source: <span class="src">openjiuwen/agent_teams/schema/events.py</span></p>
+
+<!-- ==================== 14. MODULE MAP ==================== -->
+<h2 id="modules">14. Module Map</h2>
+<table>
+  <tr><th>Module</th><th>Key Exports</th><th>Purpose</th></tr>
+  <tr><td><code>schema/blueprint.py</code></td><td><code>TeamAgentSpec</code>, <code>LeaderSpec</code>, <code>TransportSpec</code>, <code>StorageSpec</code></td><td>Team-level specs and build pipeline</td></tr>
+  <tr><td><code>schema/team.py</code></td><td><code>TeamSpec</code>, <code>TeamRole</code>, <code>TeamMemberSpec</code>, <code>TeamRuntimeContext</code></td><td>Team schemas and role enum</td></tr>
+  <tr><td><code>schema/deep_agent_spec.py</code></td><td><code>DeepAgentSpec</code>, <code>TeamModelConfig</code></td><td>Per-role agent specs</td></tr>
+  <tr><td><code>schema/events.py</code></td><td><code>TeamEvent</code>, <code>EventMessage</code></td><td>Event types and serialization</td></tr>
+  <tr><td><code>schema/stream.py</code></td><td><code>TeamOutputSchema</code></td><td>Streaming output with member attribution</td></tr>
+  <tr><td><code>agent/team_agent.py</code></td><td><code>TeamAgent</code></td><td>Central agent class</td></tr>
+  <tr><td><code>agent/coordination/</code></td><td><code>CoordinationKernel</code>, <code>EventBus</code>, <code>EventDispatcher</code></td><td>Event-driven coordination</td></tr>
+  <tr><td><code>agent/configurator.py</code></td><td><code>AgentConfigurator</code></td><td>Infra + agent setup</td></tr>
+  <tr><td><code>runtime/manager.py</code></td><td><code>TeamRuntimeManager</code></td><td>Process-level pool and dispatch</td></tr>
+  <tr><td><code>runtime/dispatch.py</code></td><td><code>decide_run_action()</code></td><td>Pure dispatch decision function</td></tr>
+  <tr><td><code>runtime/pool.py</code></td><td><code>TeamRuntimePool</code>, <code>ActiveTeam</code></td><td>In-process runtime pool</td></tr>
+  <tr><td><code>runtime/gate.py</code></td><td><code>InteractGate</code></td><td>Run/interact concurrency control</td></tr>
+  <tr><td><code>messager/</code></td><td><code>Messager</code>, <code>InProcessMessager</code>, <code>PyZmqMessager</code></td><td>Transport layer</td></tr>
+  <tr><td><code>tools/team.py</code></td><td><code>TeamBackend</code></td><td>Database-backed team management</td></tr>
+  <tr><td><code>tools/team_tools.py</code></td><td><code>create_team_tools()</code></td><td>LLM-callable tool implementations</td></tr>
+  <tr><td><code>tools/database/</code></td><td><code>TeamDatabase</code></td><td>SQLAlchemy-based persistence</td></tr>
+  <tr><td><code>interaction/</code></td><td><code>UserInbox</code>, <code>HumanAgentInbox</code></td><td>External input channels</td></tr>
+  <tr><td><code>spawn/</code></td><td><code>inprocess_spawn()</code>, <code>InProcessSpawnHandle</code></td><td>Teammate process management</td></tr>
+  <tr><td><code>harness.py</code></td><td><code>TeamHarness</code></td><td>DeepAgent adapter</td></tr>
+  <tr><td><code>models/</code></td><td><code>ModelPoolEntry</code>, <code>build_model_allocator()</code></td><td>LLM endpoint pool and allocation</td></tr>
+  <tr><td><code>memory/</code></td><td><code>TeamMemoryManager</code></td><td>Per-member memory isolation</td></tr>
+  <tr><td><code>rails/</code></td><td><code>TeamToolRail</code>, <code>TeamPolicyRail</code>, <code>FirstIterationGate</code></td><td>Behavioral rails</td></tr>
+  <tr><td><code>prompts/</code></td><td><code>PromptLoader</code></td><td>Prompt section loading and caching</td></tr>
+  <tr><td><code>monitor/</code></td><td><code>TeamMonitor</code></td><td>Team status observation</td></tr>
+  <tr><td><code>observability/</code></td><td><code>CallbackHandler</code>, <code>MonitorHandler</code></td><td>OpenTelemetry integration</td></tr>
+  <tr><td><code>team_workspace/</code></td><td><code>TeamWorkspaceManager</code></td><td>Shared workspace with locking</td></tr>
+  <tr><td><code>cli/</code></td><td>TUI, stream renderer, inbox sink</td><td>Terminal UI for team interaction</td></tr>
+  <tr><td><code>constants.py</code></td><td>Reserved names, defaults</td><td>Central constants</td></tr>
+</table>
+
+<!-- ==================== 15. DATA FLOW ==================== -->
+<h2 id="data-flow">15. End-to-End Data Flow</h2>
+
+<h3>15.1 Team Creation</h3>
+<div class="diagram">
+<pre>
+  Caller                  TeamRuntimeManager            TeamAgent (Leader)           DeepAgent
+  ──────                  ──────────────────            ──────────────────           ─────────
+  activate(spec)
+      │
+      ├──▶ _build_session()
+      ├──▶ _inspect_session()
+      ├──▶ decide_run_action() ──▶ CREATE
+      ├──▶ spec.build()  ──────────────────────▶  TeamAgent()
+      │                                         configure(spec, ctx)
+      │                                            ├── _setup_infra()
+      │                                            │     ├── create messager
+      │                                            │     ├── create TeamBackend
+      │                                            │     └── create workspace
+      │                                            └── _setup_agent()
+      │                                                  └── TeamHarness.build()
+      │                                                        └── DeepAgentSpec.build()
+      ├──▶ pool.add(ActiveTeam)
+      └──▶ return TeamRuntimeActivation
+
+
+  Then the leader's DeepAgent calls build_team tool:
+
+  DeepAgent ──▶ BuildTeamTool.invoke()
+                    ├── db.team.create_team()
+                    ├── db.member.create_member(leader)
+                    ├── db.member.create_member(predefined teammates)
+                    ├── spawn_human_agent() (if HITT)
+                    └── messager.publish(TeamCreatedEvent)
+
+  Then startup() launches unstarted members:
+
+  TeamBackend.startup(on_created)
+      ├── for each UNSTARTED member:
+      │     ├── on_created(member_name)
+      │     │     └── SpawnManager.spawn_teammate(ctx)
+      │     │           └── inprocess_spawn() → asyncio.Task
+      │     └── messager.publish(MemberSpawnedEvent)
+</pre>
+</div>
+
+<h3>15.2 Task Execution Cycle</h3>
+<div class="diagram">
+<pre>
+  Leader DeepAgent              Teammate DeepAgent
+  ────────────────              ──────────────────
+  create_task(tasks=[...])
+      │
+      ├──▶ TaskManager.add()
+      │
+      └──▶ "Tasks created: #1, #2, #3"
+
+                                     view_task(action="claimable")
+                                         │
+                                         └──▶ [PENDING tasks with met deps]
+
+                                     claim_task(task_id="#1", status="claimed")
+                                         │
+                                         ├──▶ TaskManager.claim()
+                                         └──▶ messager.publish(TASK_CLAIMED)
+
+  (leader observes claim via event)
+                                     ... teammate executes work ...
+
+                                     claim_task(task_id="#1", status="completed")
+                                         │
+                                         ├──▶ TaskManager.complete()
+                                         └──▶ messager.publish(TASK_COMPLETED)
+
+                                     view_task(action="claimable")
+                                         │
+                                         └──▶ [next available task]
+</pre>
+</div>
+
+<h3>15.3 Messaging Flow</h3>
+<div class="diagram">
+<pre>
+  Leader DeepAgent                Messager Bus              Teammate DeepAgent
+  ────────────────                ─────────────              ──────────────────
+  send_message(to="dev-1",
+               content="Fix bug")
+      │
+      ├──▶ TeamMessageManager.send_message()
+      │       ├── db.message.create()
+      │       └── messager.publish(MessageEvent)
+      │
+      └──▶ "Message sent"            │
+                                       │ EventMessage
+                                       ▼
+                                  InProcessBus / ZMQ
+                                       │
+                                       │ (filtered: not self)
+                                       ▼
+                                  EventBus.enqueue()
+                                       │
+                                       ▼
+                                  EventDispatcher.dispatch()
+                                       │
+                                       ├──▶ mailbox.append()
+                                       └──▶ wake agent if idle
+
+                                                             (agent polls mailbox)
+                                                             send_message(to="team_leader",
+                                                                          content="Done!")
+</pre>
+</div>
+
+<div class="note">
+  <strong>Key design principle:</strong> All state is persisted in the database.
+  Events are ephemeral notifications that wake agents to check their mailbox.
+  This means a teammate can recover from a crash and resume by reading its
+  pending messages from the database.
+</div>
+
+</div>
+</body>
+</html>

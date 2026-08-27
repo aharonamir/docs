@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto Harness Architecture — openjiuwen/auto_harness</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --accent3: #d2a8ff;
+    --accent4: #ffa657;
+    --accent5: #ff7b72;
+    --accent6: #79c0ff;
+    --flow: #1f6feb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.75rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin: 2.5rem 0 1rem;
+    color: var(--accent2);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  h2::before { content: ''; display: inline-block; width: 4px; height: 1.3em; background: var(--accent2); border-radius: 2px; }
+  h3 {
+    font-size: 1.15rem;
+    margin: 1.5rem 0 0.5rem;
+    color: var(--accent6);
+  }
+  h4 {
+    font-size: 1rem;
+    margin: 1rem 0 0.4rem;
+    color: var(--accent4);
+  }
+  p, li { color: var(--text); }
+  p { margin-bottom: 0.8rem; }
+  ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+  li { margin-bottom: 0.3rem; }
+  code {
+    background: rgba(110,118,129,0.2);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.9em;
+    color: var(--accent);
+  }
+  pre {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.8rem 0 1.2rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; color: var(--text); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin: 1rem 0;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .card h4 { margin-top: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0 1.2rem;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--accent); font-weight: 600; }
+  td { color: var(--text); }
+  .tag {
+    display: inline-block;
+    padding: 0.15em 0.5em;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-right: 0.3rem;
+  }
+  .tag-session { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .tag-task { background: rgba(126,231,135,0.15); color: var(--accent2); }
+  .tag-infra { background: rgba(210,168,255,0.15); color: var(--accent3); }
+  .tag-data { background: rgba(255,166,87,0.15); color: var(--accent4); }
+  .flow-diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    text-align: center;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+  .flow-diagram .stage {
+    display: inline-block;
+    padding: 0.4em 0.8em;
+    border-radius: 6px;
+    margin: 0.2rem;
+    font-weight: 600;
+  }
+  .flow-diagram .arrow { color: var(--muted); margin: 0 0.3rem; }
+  .s-assess { background: rgba(88,166,255,0.2); color: var(--accent); }
+  .s-plan { background: rgba(210,168,255,0.2); color: var(--accent3); }
+  .s-impl { background: rgba(126,231,135,0.2); color: var(--accent2); }
+  .s-verify { background: rgba(255,166,87,0.2); color: var(--accent4); }
+  .s-commit { background: rgba(255,123,114,0.2); color: var(--accent5); }
+  .s-publish { background: rgba(121,192,255,0.2); color: var(--accent6); }
+  .s-learn { background: rgba(139,148,158,0.2); color: var(--muted); }
+  .s-activate { background: rgba(126,231,135,0.3); color: var(--accent2); }
+  .note {
+    background: rgba(88,166,255,0.08);
+    border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 1rem 0;
+    font-size: 0.92rem;
+  }
+  .note strong { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 1rem; margin-bottom: 2rem; }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Auto Harness Architecture</h1>
+<p class="subtitle">Self-optimizing coding agent framework &mdash; <code>openjiuwen/auto_harness/</code></p>
+
+<!-- ============================================================ -->
+<h2>Overview</h2>
+
+<p><strong>Auto Harness</strong> is a self-driving coding agent that autonomously improves a codebase.
+It runs a <em>session</em> that assesses the repository, plans tasks, implements code changes, verifies them
+with CI, commits, and optionally publishes a pull request &mdash; all without human intervention.</p>
+
+<p>The system has two built-in pipeline modes:</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>Meta Evolve Pipeline</h4>
+    <span class="tag tag-session">session-scoped</span>
+    <p>Directly modifies the repository source code. The classic
+    assess &rarr; plan &rarr; implement &rarr; verify &rarr; commit &rarr; PR &rarr; learnings loop.
+    Used for code quality improvements, bug fixes, and feature additions.</p>
+  </div>
+  <div class="card">
+    <h4>Extended Evolve Pipeline</h4>
+    <span class="tag tag-session">session-scoped</span>
+    <p>Generates <strong>runtime extensions</strong> (tools, skills, rails) that extend the agent's
+    own capabilities. Analyzes capability gaps, designs extension packages, implements them
+    in isolated worktrees, verifies with acceptance tests, and hot-loads them into the live agent.</p>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>High-Level Architecture</h2>
+
+<div class="flow-diagram">
+<pre>
+                          ┌─────────────────────────────────┐
+                          │      AutoHarnessOrchestrator     │
+                          │  (session controller, dispatcher) │
+                          └──────────┬──────────────────────┘
+                                     │
+                    ┌────────────────┼────────────────────┐
+                    │                │                     │
+          ┌─────────▼──────┐  ┌──────▼─────────┐  ┌───────▼────────┐
+          │ PipelineRegistry│  │  StageRegistry  │  │ ArtifactStore  │
+          │  (built-in +    │  │  (built-in +    │  │ (per-session   │
+          │   extensions)   │  │   extensions)   │  │  key-value)    │
+          └────────────────┘  └────────────────┘  └────────────────┘
+                    │
+          ┌─────────▼──────────────────────────────────────────────┐
+          │                  BasePipeline                          │
+          │  ┌──────────────────┐  ┌──────────────────────────┐   │
+          │  │ MetaEvolvePipeline│  │ ExtendedEvolvePipeline   │   │
+          │  │  assess → plan →  │  │  assess_ext → plan_ext → │   │
+          │  │  implement →      │  │  build_verify → merge →  │   │
+          │  │  verify → commit  │  │  activate (dep. waves)   │   │
+          │  │  → publish →      │  └──────────────────────────┘   │
+          │  │  learnings        │                                  │
+          │  └──────────────────┘                                  │
+          └────────────────────────────────────────────────────────┘
+</pre>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Session Lifecycle</h2>
+
+<h3>1. Configuration &amp; Bootstrap</h3>
+
+<p>Everything starts with <code>AutoHarnessConfig</code> (<code>schema.py:481</code>) &mdash; a dataclass
+that holds all runtime settings:</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>Paths</h4>
+    <ul>
+      <li><code>data_dir</code> &mdash; root for all artifacts</li>
+      <li><code>local_repo</code> &mdash; path to local agent-core repo</li>
+      <li>Derived: <code>experience_dir</code>, <code>worktrees_dir</code>, <code>runs_dir</code>, <code>cache_repo_dir</code>, <code>runtime_extensions_dir</code></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Budget</h4>
+    <ul>
+      <li><code>session_budget_secs</code> &mdash; wall-clock limit</li>
+      <li><code>cost_limit_usd</code> &mdash; cost cap</li>
+      <li><code>task_timeout_secs</code> &mdash; per-task timeout</li>
+      <li><code>max_tasks_per_session</code> &mdash; task cap</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Git &amp; CI</h4>
+    <ul>
+      <li><code>git_remote</code>, <code>git_base_branch</code></li>
+      <li><code>fork_owner</code>, <code>upstream_owner</code></li>
+      <li><code>ci_gate_config</code> &mdash; CI gate rules YAML</li>
+      <li><code>fix_phase1_max_retries</code>, <code>fix_phase2_max_retries</code></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Security</h4>
+    <ul>
+      <li><code>immutable_files</code> &mdash; files the agent must never modify</li>
+      <li><code>high_impact_prefixes</code> &mdash; paths requiring extra caution</li>
+      <li><code>agent_iterations</code> &mdash; per-stage LLM iteration caps</li>
+    </ul>
+  </div>
+</div>
+
+<p>Config can be loaded from YAML via <code>load_auto_harness_config()</code> or constructed programmatically.
+If the config file doesn't exist, a template is auto-generated.</p>
+
+<h3>2. Orchestrator Initialization</h3>
+
+<p><code>AutoHarnessOrchestrator</code> (<code>orchestrator.py:103</code>) is the session controller. On construction it creates:</p>
+
+<table>
+  <tr><th>Component</th><th>Role</th></tr>
+  <tr><td><code>ArtifactStore</code></td><td>Key-value store for stage outputs (scoped by task_id)</td></tr>
+  <tr><td><code>StageRegistry</code></td><td>All registered stage specs (built-in + extensions)</td></tr>
+  <tr><td><code>PipelineRegistry</code></td><td>All registered pipeline specs</td></tr>
+  <tr><td><code>ExperienceStore</code></td><td>JSONL-backed archive of past experiences</td></tr>
+  <tr><td><code>SessionBudgetController</code></td><td>Wall-clock and cost budget tracker</td></tr>
+  <tr><td><code>FixLoopController</code></td><td>Two-phase CI fix loop engine</td></tr>
+  <tr><td><code>WorktreeManager</code></td><td>Git worktree creation/cleanup for task isolation</td></tr>
+  <tr><td><code>GitOperations</code></td><td>Git commands (status, diff, commit, push, PR)</td></tr>
+  <tr><td><code>CIGateRunner</code></td><td>Runs CI checks defined in <code>ci_gate.yaml</code></td></tr>
+</table>
+
+<h3>3. Pipeline Selection</h3>
+
+<p>Before any stage runs, the orchestrator calls <code>choose_session_pipeline()</code> (<code>infra/pipeline_selector.py:62</code>)
+which decides between the two pipelines based on:</p>
+<ol>
+  <li><strong>Explicit preference</strong> &mdash; if <code>config.pipeline_preference</code> is set to a specific pipeline name</li>
+  <li><strong>Signal detection</strong> &mdash; if task topics contain keywords like "competitor", "absorb", "extend capability", it routes to the Extended Evolve pipeline</li>
+  <li><strong>Default</strong> &mdash; falls back to Meta Evolve pipeline</li>
+</ol>
+
+<h3>4. Session Execution</h3>
+
+<p><code>run_session_stream()</code> (<code>orchestrator.py:264</code>) is the main entry point. It:</p>
+<ol>
+  <li>Resets state, starts budget timer</li>
+  <li>Selects the pipeline</li>
+  <li>Streams the pipeline's <code>stream(ctx)</code> method</li>
+  <li>Yields <code>OutputSchema</code> chunks to the caller (CLI, UI, etc.)</li>
+  <li>Emits a <code>harness_session_finished</code> event when done</li>
+</ol>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Meta Evolve Pipeline</h2>
+
+<p>The <strong>Meta Evolve Pipeline</strong> (<code>meta_evolve_pipeline.py:43</code>) is the classic
+assess-and-improve loop. Its stage order is:</p>
+
+<div class="flow-diagram">
+  <span class="stage s-assess">ASSESS</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-plan">PLAN</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-impl">IMPLEMENT</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-verify">VERIFY</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-commit">COMMIT</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-publish">PUBLISH PR</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-learn">LEARNINGS</span>
+</div>
+
+<h3>Stage: Assess</h3>
+<div class="card">
+<p><code>MetaAssessStage</code> (<code>stages/assess.py:160</code>) evaluates the current repository state:</p>
+<ul>
+  <li>Creates a readonly git worktree snapshot</li>
+  <li>Launches a <code>create_assess_agent()</code> DeepAgent with research tools (web search, fetch)</li>
+  <li>Agent inspects code, runs lint/type-check, checks recent git history, reads past experiences</li>
+  <li>Produces an <code>AssessmentArtifact</code> with a structured report</li>
+  <li>Falls back to a pure-Python assessment if the agent fails</li>
+</ul>
+</div>
+
+<h3>Stage: Plan</h3>
+<div class="card">
+<p><code>MetaPlanStage</code> (<code>stages/plan.py:76</code>) generates optimization tasks:</p>
+<ul>
+  <li>Consumes the assessment report</li>
+  <li>Launches a <code>create_plan_agent()</code> DeepAgent</li>
+  <li>Agent analyzes the report and produces a task list</li>
+  <li>Parses the output into <code>OptimizationTask</code> objects (capped at 1 task per session)</li>
+  <li>Falls back to using input tasks if agent produces nothing</li>
+</ul>
+</div>
+
+<h3>Stage: Implement</h3>
+<div class="card">
+<p><code>MetaImplementStage</code> (<code>stages/implement.py:317</code>) executes code changes:</p>
+<ul>
+  <li>Creates an isolated git worktree for the task</li>
+  <li>Launches the main <code>create_auto_harness_agent()</code> DeepAgent with full tools, rails, and subagents</li>
+  <li>Agent directly edits files, runs commands, uses explore/browser subagents</li>
+  <li>After completion, checks git status/diff to detect what was actually changed</li>
+  <li>Produces a <code>CodeChangeArtifact</code> listing edited files</li>
+</ul>
+</div>
+
+<h3>Stage: Verify</h3>
+<div class="card">
+<p><code>MetaVerifyStage</code> (<code>stages/verify.py:300</code>) runs CI and the fix loop:</p>
+<ol>
+  <li>Runs all CI gates via <code>CIGateRunner</code></li>
+  <li>If CI fails, starts a <strong>two-phase fix loop</strong>:
+    <ul>
+      <li><strong>Phase 1</strong>: Agent reads CI errors and fixes code; re-runs CI (up to 10 retries)</li>
+      <li><strong>Phase 2</strong>: Evaluator agent reviews quality; if rejected, agent continues fixing (up to 9 retries)</li>
+    </ul>
+  </li>
+  <li>If fix loop exhausts retries, changes are <strong>reverted</strong> (git discard)</li>
+  <li>Produces a <code>VerifyReportArtifact</code></li>
+</ol>
+</div>
+
+<h3>Stage: Commit</h3>
+<div class="card">
+<p><code>CommitStage</code> (<code>stages/commit.py:276</code>) creates a git commit:</p>
+<ul>
+  <li>Collects <code>CommitFacts</code> &mdash; branch, dirty files, edited files, allowed files, diff stat</li>
+  <li>Uses <code>EditSafetyRail</code> to track which files the agent actually modified</li>
+  <li>Derives an allowed file list (task-declared files + derived test files, excluding pre-existing dirty files)</li>
+  <li>Launches a commit agent that runs <code>git add</code> + <code>git commit</code></li>
+  <li>Retries once if the first attempt fails</li>
+</ul>
+</div>
+
+<h3>Stage: Publish PR</h3>
+<div class="card">
+<p><code>PublishPRStage</code> (<code>stages/publish_pr.py:160</code>) pushes and creates a PR:</p>
+<ul>
+  <li>If <code>git_remote</code> and <code>fork_owner</code> are configured, generates a PR draft via LLM</li>
+  <li>Pushes the branch to the remote</li>
+  <li>Creates a PR via GitCode API</li>
+  <li>Records a success experience</li>
+  <li>Produces a <code>CycleResult</code> with PR URL and completion summary</li>
+</ul>
+</div>
+
+<h3>Stage: Learnings</h3>
+<div class="card">
+<p><code>LearningsStage</code> (<code>stages/learnings.py:42</code>) reflects on the session:</p>
+<ul>
+  <li>Launches a <code>create_learnings_agent()</code> that reviews all session results</li>
+  <li>Extracts structured learnings (insights, failures, optimizations)</li>
+  <li>Persists them to the <code>ExperienceStore</code> for future sessions</li>
+</ul>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Extended Evolve Pipeline</h2>
+
+<p>The <strong>Extended Evolve Pipeline</strong> (<code>extended_evolve_pipeline.py:45</code>) generates
+new runtime extensions (tools, skills, rails) to expand the agent's own capabilities. Its stage order is:</p>
+
+<div class="flow-diagram">
+  <span class="stage s-assess">ASSESS EXT</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-plan">PLAN EXT</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-impl">BUILD + VERIFY</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-commit">MERGE</span>
+  <span class="arrow">&rarr;</span>
+  <span class="stage s-activate">ACTIVATE</span>
+</div>
+
+<h3>Stage: Assess Ext (Gap Analysis)</h3>
+<div class="card">
+<p><code>ExtendAssessStage</code> (<code>stages/assess.py:578</code>) analyzes capability gaps:</p>
+<ul>
+  <li>Launches the assess agent with a gap-analysis prompt</li>
+  <li>Agent produces a markdown table of gaps (feature, current state, impact, feasibility)</li>
+  <li>Output is parsed into <code>Gap</code> objects, sorted by priority (impact &times; feasibility)</li>
+  <li>Falls back to heuristic gap generation from input tasks</li>
+</ul>
+</div>
+
+<h3>Stage: Plan Ext (Extension Design)</h3>
+<div class="card">
+<p><code>ExtendPlanStage</code> (<code>stages/plan.py:152</code>) designs runtime extensions:</p>
+<ul>
+  <li>Launches a <code>create_design_ext_agent()</code></li>
+  <li>For each gap, designs an <code>ExtensionDesign</code> with:
+    <ul>
+      <li><code>kind</code> &mdash; "capability" or "constraint"</li>
+      <li><code>components</code> &mdash; which components to build (tool, skill, rail)</li>
+      <li><code>file_plan</code> &mdash; directory structure and manifest path</li>
+      <li><code>depends_on</code> &mdash; dependencies on other extensions</li>
+    </ul>
+  </li>
+  <li>Constraints are prioritized over capabilities</li>
+</ul>
+</div>
+
+<h3>Stage: Build + Verify (Dependency Waves)</h3>
+<div class="card">
+<p>Extensions are built and verified in <strong>dependency waves</strong> with bounded concurrency:</p>
+<ol>
+  <li><strong>Implement Ext</strong> (<code>ExtendImplementStage</code>): For each design, creates an isolated worktree and launches the task agent to generate the extension package (Python files, <code>harness_config.yaml</code>, skill markdown)</li>
+  <li><strong>Verify Ext</strong> (<code>ExtendVerifyStage</code>): Three-layer verification:
+    <ul>
+      <li><em>Structure check</em>: manifest exists, classes can be instantiated, skill dirs have <code>SKILL.md</code></li>
+      <li><em>Lint check</em>: <code>ruff format</code> + <code>ruff check</code></li>
+      <li><em>Acceptance tests</em>: Agent generates pytest tests, runs them, and fixes the extension if tests fail (up to 3 attempts)</li>
+    </ul>
+  </li>
+  <li><strong>Promote</strong>: Verified extensions are copied to the session runtime directory</li>
+</ol>
+<p>Extensions with unmet dependencies are skipped. Extensions with satisfied dependencies run in parallel (up to <code>extension_verify_concurrency</code>).</p>
+</div>
+
+<h3>Stage: Merge</h3>
+<div class="card">
+<p><code>MergeActivationBlock</code> (<code>stages/merge.py:48</code>) combines multiple verified extensions into a single merged package:</p>
+<ul>
+  <li>Calls <code>merge_runtime_extensions()</code> (<code>infra/runtime_extension_merger.py</code>) to deterministically combine all verified extension directories</li>
+  <li>Detects file-path conflicts and generates rename maps for imports and skill references</li>
+  <li>Runs <strong>static checks</strong> (<code>infra/runtime_extension_static_checks.py</code>) against the merged package: <code>ruff format</code>, <code>ruff check --fix</code>, and structure validation</li>
+  <li>If static checks fail, launches a <code>create_merge_ext_agent()</code> to repair issues (up to 3 rounds)</li>
+  <li>Cleans up source extension directories after successful merge</li>
+  <li>Yields a <code>MergeSuccessResult</code> containing the merged <code>RuntimeExtensionArtifact</code></li>
+</ul>
+<p>Merge is only triggered when <strong>multiple extensions</strong> were built in the same session. Single-extension sessions skip merge and go straight to activate.</p>
+</div>
+
+<h3>Stage: Activate</h3>
+<div class="card">
+<p><code>ExtendActivateStage</code> (<code>stages/activate.py:45</code>) hot-loads extensions:</p>
+<ol>
+  <li>Emits an <code>extension_ready</code> event with extension metadata</li>
+  <li>Creates an <code>__interaction__</code> event asking the user to accept or reject</li>
+  <li>If accepted, calls <code>agent.enqueue_harness_config()</code> to hot-load the extension</li>
+  <li>Streams a testing guide generated by a lightweight agent</li>
+</ol>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Core Subsystems</h2>
+
+<h3>Execution Contexts</h3>
+
+<p>Two context objects flow through the pipeline:</p>
+
+<table>
+  <tr><th>Context</th><th>Scope</th><th>Contents</th></tr>
+  <tr>
+    <td><code>SessionContext</code></td>
+    <td>Entire session</td>
+    <td>Reference to orchestrator; access to artifacts, messages</td>
+  </tr>
+  <tr>
+    <td><code>TaskContext</code></td>
+    <td>Single task</td>
+    <td>Extends SessionContext + <code>OptimizationTask</code> + <code>TaskRuntime</code> (agent, worktree path, edit safety rail, etc.)</td>
+  </tr>
+</table>
+
+<h3>Artifact Store</h3>
+
+<p><code>ArtifactStore</code> (<code>artifacts/store.py</code>) is a key-value store scoped by <code>task_id</code>.
+Stages <code>produce</code> artifacts that downstream stages <code>consume</code>. For example:</p>
+<pre>
+AssessStage  produces  "assessment"     →  PlanStage     consumes "assessment"
+PlanStage    produces  "task_plan"      →  ImplementStage consumes "task_plan"
+Implement    produces  "code_change"    →  VerifyStage   consumes "code_change"
+Verify       produces  "verify_report"  →  CommitStage   consumes "verify_report"
+</pre>
+
+<h3>Experience Store</h3>
+
+<p><code>ExperienceStore</code> (<code>experience/experience_store.py:24</code>) is a JSONL-backed archive:</p>
+<ul>
+  <li><strong>Record</strong>: Appends <code>Experience</code> entries (optimization, failure, insight) with dedup within 24h</li>
+  <li><strong>Search</strong>: Keyword search with recency-weighted scoring</li>
+  <li><strong>List recent</strong>: Returns N most recent experiences</li>
+</ul>
+
+<p><code>ActiveContextSynthesizer</code> (<code>experience/synthesizer.py:38</code>) condenses experiences into
+a markdown summary grouped by type (optimizations, failures, insights) with time-decay weighting,
+suitable for injection into agent prompts.</p>
+
+<h3>Stage Skills</h3>
+
+<p>Each stage has a paired <code>SKILL.md</code> in <code>skills/</code> that provides the agent with
+stage-specific instructions and context. These are loaded via <code>SkillUseRail</code>:</p>
+
+<table>
+  <tr><th>Skill</th><th>Directory</th><th>Used by Stage</th></tr>
+  <tr><td>Assess</td><td><code>skills/assess/</code></td><td>MetaAssessStage, ExtendAssessStage</td></tr>
+  <tr><td>Plan</td><td><code>skills/plan/</code></td><td>MetaPlanStage</td></tr>
+  <tr><td>Implement</td><td><code>skills/implement/</code></td><td>MetaImplementStage</td></tr>
+  <tr><td>Implement Ext</td><td><code>skills/implement_ext/</code></td><td>ExtendImplementStage</td></tr>
+  <tr><td>Verify</td><td><code>skills/verify/</code></td><td>MetaVerifyStage</td></tr>
+  <tr><td>Verify Ext</td><td><code>skills/verify_ext/</code></td><td>ExtendVerifyStage</td></tr>
+  <tr><td>Commit</td><td><code>skills/commit/</code></td><td>CommitStage</td></tr>
+  <tr><td>Communicate</td><td><code>skills/communicate/</code></td><td>PublishPRStage, LearningsStage</td></tr>
+  <tr><td>Design Ext</td><td><code>skills/design_ext/</code></td><td>ExtendPlanStage</td></tr>
+  <tr><td>Select Pipeline</td><td><code>skills/select_pipeline/</code></td><td>Pipeline selection</td></tr>
+</table>
+
+<h3>Registries</h3>
+
+<p><code>StageRegistry</code> and <code>PipelineRegistry</code> (<code>registry/base.py</code>) are simple
+name &rarr; spec maps. Built-in stages and pipelines are registered in <code>registry/builtin.py</code>.
+External extensions can register custom stages/pipelines via <code>config.stage_registrars</code> and
+<code>config.pipeline_registrars</code> (using <code>module:callable</code> notation).</p>
+
+<h3>Infrastructure</h3>
+
+<table>
+  <tr><th>Component</th><th>File</th><th>Role</th></tr>
+  <tr><td><code>WorktreeManager</code></td><td><code>infra/worktree_manager.py</code></td><td>Creates isolated git worktrees for each task; supports readonly snapshots for assess</td></tr>
+  <tr><td><code>GitOperations</code></td><td><code>infra/git_operations.py</code></td><td>Git porcelain commands: status, diff, commit, push, create PR via GitCode API</td></tr>
+  <tr><td><code>CIGateRunner</code></td><td><code>infra/ci_gate_runner.py</code></td><td>Runs CI gates defined in <code>ci_gate.yaml</code> (lint, type-check, tests)</td></tr>
+  <tr><td><code>FixLoopController</code></td><td><code>infra/fix_loop.py</code></td><td>Two-phase fix loop: Phase 1 = direct CI fix; Phase 2 = evaluator-reviewed fix</td></tr>
+  <tr><td><code>SessionBudgetController</code></td><td><code>infra/session_budget.py</code></td><td>Tracks wall-clock time, cost, and task count against configured limits</td></tr>
+  <tr><td><code>PipelineSelector</code></td><td><code>infra/pipeline_selector.py</code></td><td>Auto-detects which pipeline to use based on task signals and config preference</td></tr>
+  <tr><td><code>EditScope</code></td><td><code>infra/edit_scope.py</code></td><td>Defines which paths the agent is allowed to edit; enforces edit boundaries</td></tr>
+  <tr><td><code>RuntimeExtensionLoader</code></td><td><code>infra/runtime_extension_loader.py</code></td><td>Loads extension rails/tools/skills from <code>harness_config.yaml</code> manifests</td></tr>
+  <tr><td><code>RuntimeExtensionMerger</code></td><td><code>infra/runtime_extension_merger.py</code></td><td>Deterministic merge of multiple verified extensions; conflict detection, rename maps</td></tr>
+  <tr><td><code>RuntimeExtensionStaticChecks</code></td><td><code>infra/runtime_extension_static_checks.py</code></td><td>Shared static-analysis utilities: <code>ruff format</code>, <code>ruff check</code>, structure validation</td></tr>
+</table>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Agent Factory</h2>
+
+<p>The <code>agents/factory.py</code> creates specialized <code>DeepAgent</code> instances for each stage.
+Each agent gets tailored system prompts, rails, tools, and subagents:</p>
+
+<table>
+  <tr><th>Factory Function</th><th>Stage</th><th>Key Features</th></tr>
+  <tr><td><code>create_auto_harness_agent()</code></td><td>Implement</td><td>Full rails (edit safety, security, context, experience, LSP), task loop, explore + browser subagents</td></tr>
+  <tr><td><code>create_assess_agent()</code></td><td>Assess</td><td>Readonly rails, research tools (web search/fetch), explore subagent</td></tr>
+  <tr><td><code>create_plan_agent()</code></td><td>Plan</td><td>Readonly rails, research tools</td></tr>
+  <tr><td><code>create_eval_agent()</code></td><td>Verify (fix loop)</td><td>Readonly rails, verify skills</td></tr>
+  <tr><td><code>create_design_ext_agent()</code></td><td>Plan Ext</td><td>Readonly rails, research tools, design_ext skill</td></tr>
+  <tr><td><code>create_commit_agent()</code></td><td>Commit</td><td>No task loop, commit + communicate skills</td></tr>
+  <tr><td><code>create_pr_draft_agent()</code></td><td>Publish PR</td><td>Readonly, communicate skill</td></tr>
+  <tr><td><code>create_learnings_agent()</code></td><td>Learnings</td><td>Readonly, communicate skill</td></tr>
+  <tr><td><code>create_activate_guide_agent()</code></td><td>Activate</td><td>Minimal agent (1 iteration, no tools)</td></tr>
+  <tr><td><code>create_merge_ext_agent()</code></td><td>Merge</td><td>Readonly rails, repairs merged extension static-check failures</td></tr>
+</table>
+
+<h3>Rails Mounted on Agents</h3>
+
+<table>
+  <tr><th>Rail</th><th>File</th><th>What it does</th></tr>
+  <tr><td><code>SysOperationRail</code></td><td><code>harness/rails/</code></td><td>Registers shell/filesystem operation tools</td></tr>
+  <tr><td><code>AutoHarnessContextRail</code></td><td><code>rails/context_rail.py</code></td><td>Injects auto-harness context into the system prompt</td></tr>
+  <tr><td><code>LspRail</code></td><td><code>harness/rails/</code></td><td>Registers LSP (Language Server Protocol) tools</td></tr>
+  <tr><td><code>AutoHarnessExperienceRail</code></td><td><code>rails/experience_rail.py</code></td><td>Injects relevant past experiences into the prompt</td></tr>
+  <tr><td><code>SecurityRail</code></td><td><code>rails/security_rail.py</code></td><td>Prevents modification of immutable files and high-impact paths</td></tr>
+  <tr><td><code>EditSafetyRail</code></td><td><code>rails/edit_safety_rail.py</code></td><td>Tracks which files the agent edits; enforces edit scope boundaries</td></tr>
+  <tr><td><code>BudgetRail</code></td><td><code>rails/budget_rail.py</code></td><td>Checks budget before each model call; stops if exceeded</td></tr>
+  <tr><td><code>RevertOnFailureRail</code></td><td><code>rails/revert_on_failure_rail.py</code></td><td>Auto-reverts worktree changes on task failure</td></tr>
+  <tr><td><code>SkillUseRail</code></td><td><code>harness/rails/</code></td><td>Loads and activates named skills for the current stage</td></tr>
+  <tr><td><code>TaskPlanningRail</code></td><td><code>harness/rails/</code></td><td>Manages task decomposition and progress tracking</td></tr>
+</table>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Data Flow Diagram</h2>
+
+<div class="flow-diagram">
+<pre>
+                         ┌───────────────┐
+                         │  User / CLI   │
+                         └───────┬───────┘
+                                 │ tasks[] or message
+                                 ▼
+                    ┌────────────────────────┐
+                    │  AutoHarnessOrchestrator │
+                    │  run_session_stream()    │
+                    └────────────┬─────────────┘
+                                 │
+                    ┌────────────▼─────────────┐
+                    │  Pipeline Selection       │
+                    │  (signal detection / cfg) │
+                    └───────┬──────────┬────────┘
+                            │          │
+               ┌────────────▼──┐  ┌────▼──────────────┐
+               │ Meta Evolve   │  │ Extended Evolve    │
+               │ Pipeline      │  │ Pipeline           │
+               └────┬──────────┘  └────┬───────────────┘
+                    │                   │
+          ┌─────────▼─────────┐  ┌──────▼──────────────┐
+          │ Session Stages:   │  │ Session Stages:      │
+          │  Assess           │  │  Assess Ext (gaps)   │
+          │  Plan             │  │  Plan Ext (designs)  │
+          └─────┬─────────────┘  └──────┬──────────────┘
+                │                         │
+       ┌────────▼─────────┐    ┌─────────▼──────────────┐
+       │ Per-Task Loop:   │    │ Dependency Waves:       │
+       │  Implement       │    │  Implement Ext (per     │
+       │  Verify + Fix    │    │  design in isolated     │
+       │  Commit          │    │  worktree)              │
+       │  Publish PR      │    │  Verify Ext (structure  │
+       └────────┬─────────┘    │  + lint + acceptance)   │
+       │              │  Merge (combine exts)   │
+       │              │  Activate (hot-load)    │
+                │              └─────────┬───────────────┘
+                │                         │
+       ┌────────▼─────────────────────────▼──────┐
+       │           Shared Infrastructure          │
+       │  WorktreeManager  GitOperations          │
+       │  CIGateRunner     FixLoopController      │
+       │  ExperienceStore  SessionBudgetController│
+       │  ArtifactStore    RuntimeExtensionLoader │
+       │  RuntimeExtensionMerger                  │
+       │  RuntimeExtensionStaticChecks            │
+       └─────────────────────────────────────────┘
+</pre>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Key Design Patterns</h2>
+
+<h3>1. Pipeline &amp; Stage Pattern</h3>
+<div class="card">
+<p>Pipelines are composable sequences of stages. Each stage declares <code>consumes</code> and <code>produces</code>
+artifacts, creating a typed data-flow contract. The <code>PipelineStageMap</code> binds abstract slots
+(like "assess", "plan") to concrete stage classes, allowing different pipelines to reuse the same slots
+with different implementations.</p>
+</div>
+
+<h3>2. Worktree Isolation</h3>
+<div class="card">
+<p>Each task runs in an isolated git worktree. This ensures:</p>
+<ul>
+  <li>Assess runs on a clean readonly snapshot</li>
+  <li>Implement runs in a writable worktree that can be discarded on failure</li>
+  <li>Extension builds are isolated from each other</li>
+  <li>Multiple extensions can build in parallel without conflicts</li>
+</ul>
+</div>
+
+<h3>3. Two-Phase Fix Loop</h3>
+<div class="card">
+<p>The verify stage uses a two-phase approach:</p>
+<ul>
+  <li><strong>Phase 1 (Direct Fix)</strong>: CI fails &rarr; agent reads errors &rarr; agent fixes code &rarr; re-run CI. Up to 10 retries.</li>
+  <li><strong>Phase 2 (Evaluated Fix)</strong>: After CI passes, an evaluator agent reviews quality. If rejected, agent continues fixing. Up to 9 retries.</li>
+  <li>If all retries are exhausted, changes are reverted automatically.</li>
+</ul>
+</div>
+
+<h3>4. Experience Accumulation</h3>
+<div class="card">
+<p>Every session records experiences (successes, failures, insights) to a persistent JSONL store.
+Future sessions query this store to:</p>
+<ul>
+  <li>Avoid repeating failed approaches</li>
+  <li>Build on past successes</li>
+  <li>Provide context to the assess and plan agents</li>
+</ul>
+<p>The <code>ActiveContextSynthesizer</code> condenses recent experiences into a token-budgeted
+markdown summary injected into agent prompts via <code>AutoHarnessExperienceRail</code>.</p>
+</div>
+
+<h3>5. Streaming Architecture</h3>
+<div class="card">
+<p>The entire pipeline is <strong>async-streaming</strong>. Every stage's <code>stream()</code> method is an
+async generator that yields <code>OutputSchema</code> chunks. This allows:</p>
+<ul>
+  <li>Real-time progress reporting to the UI</li>
+  <li>Streaming LLM output without buffering</li>
+  <li>Interaction events (e.g., activate confirmation) embedded in the stream</li>
+</ul>
+</div>
+
+<h3>6. Extension Merge &amp; Conflict Resolution</h3>
+<div class="card">
+<p>When multiple extensions are built in a single session, the merge stage (<code>MergeActivationBlock</code>)
+combines them into one deterministic package:</p>
+<ul>
+  <li>File-path conflict detection &mdash; duplicate paths trigger rename with import rewriting</li>
+  <li>Skill reference remapping &mdash; skill directories are re-rooted under the merged namespace</li>
+  <li>Post-merge static checks &mdash; <code>ruff format</code>, <code>ruff check --fix</code>, structure validation</li>
+  <li>Agent-assisted repair &mdash; if static checks fail, a merge agent fixes issues (up to 3 rounds)</li>
+</ul>
+<p>Single-extension sessions skip merge entirely and activate the verified extension directly.</p>
+</div>
+
+<h3>7. Runtime Extension Hot-Loading</h3>
+<div class="card">
+<p>The Extended Evolve pipeline generates extensions that can be hot-loaded into a running
+<code>DeepAgent</code> without restart:</p>
+<ol>
+  <li>Extension is built and verified in an isolated worktree</li>
+  <li>Verified extension is promoted to the session runtime directory</li>
+  <li>User confirms activation via an interaction event</li>
+  <li><code>agent.enqueue_harness_config()</code> queues the extension for loading</li>
+  <li>Extension takes effect on the next query to the agent</li>
+</ol>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h2>Package Structure</h2>
+
+<pre><code>openjiuwen/auto_harness/
+├── __init__.py              # Public API exports
+├── schema.py                # All data models (config, artifacts, enums)
+├── orchestrator.py          # AutoHarnessOrchestrator (session controller)
+│
+├── agents/
+│   ├── __init__.py
+│   └── factory.py           # Agent creation functions per stage
+│
+├── artifacts/
+│   ├── __init__.py
+│   └── store.py             # ArtifactStore (key-value with task scoping)
+│
+├── contexts/
+│   ├── __init__.py
+│   └── execution.py         # SessionContext, TaskContext, TaskRuntime
+│
+├── experience/
+│   ├── __init__.py
+│   ├── experience_store.py  # JSONL-backed experience archive
+│   └── synthesizer.py       # ActiveContextSynthesizer (experience → prompt)
+│
+├── infra/
+│   ├── ci_gate_runner.py    # CI gate execution
+│   ├── commit_scope.py      # Commit file scope derivation
+│   ├── edit_scope.py        # Edit boundary enforcement
+│   ├── fix_loop.py          # Two-phase CI fix loop controller
+│   ├── git_auth.py          # Git authentication helpers
+│   ├── git_operations.py    # Git commands (status, diff, commit, push, PR)
+│   ├── github_cli.py        # GitHub/GitCode CLI wrapper
+│   ├── parsers.py           # Output parsers (tasks, gaps, designs, PR drafts)
+│   ├── pipeline_selector.py # Auto pipeline selection via signal detection
+│   ├── runtime_extension_loader.py  # Load extension components from manifest
+│   ├── runtime_extension_merger.py   # Deterministic merge of multiple extensions
+│   ├── runtime_extension_static_checks.py  # Shared static-analysis utilities
+│   ├── session_budget.py    # Wall-clock and cost budget tracker
+│   └── worktree_manager.py  # Git worktree creation/cleanup
+│
+├── pipelines/
+│   ├── __init__.py           # Pipeline name constants
+│   ├── base.py               # BasePipeline, PipelineStageMap
+│   ├── meta_evolve_pipeline/
+│   │   ├── __init__.py
+│   │   ├── meta_evolve_pipeline.py      # Assess → Plan → Tasks → Learnings
+│   │   └── meta_evolve_task_pipeline.py # Per-task: Implement → Verify → Commit → PR
+│   └── extended_evolve_pipeline/
+│       ├── __init__.py
+│       ├── extended_evolve_pipeline.py  # Gap analysis → Design → Build waves → Merge → Activate
+│       └── extension_task_pipeline.py   # Per-extension: Implement → Verify → Merge → Activate
+│
+├── prompts/
+│   ├── __init__.py
+│   └── sections.py           # System prompt section builders
+│
+├── rails/
+│   ├── __init__.py
+│   ├── budget_rail.py        # Budget enforcement rail
+│   ├── context_rail.py       # Auto-harness context injection
+│   ├── edit_safety_rail.py   # File edit tracking and scope enforcement
+│   ├── experience_rail.py    # Experience injection into prompts
+│   ├── revert_on_failure_rail.py  # Auto-revert on task failure
+│   └── security_rail.py      # Immutable file protection
+│
+├── registry/
+│   ├── __init__.py
+│   ├── base.py               # BaseRegistry, StageRegistry, PipelineRegistry
+│   └── builtin.py            # Built-in stage and pipeline registration
+│
+├── stages/
+│   ├── __init__.py
+│   ├── base.py               # BaseStage, SessionStage, TaskStage
+│   ├── activate.py           # ExtendActivateStage (hot-load + user confirm)
+│   ├── assess.py             # MetaAssessStage, ExtendAssessStage
+│   ├── commit.py             # CommitStage (git add + commit)
+│   ├── implement.py          # MetaImplementStage, ExtendImplementStage
+│   ├── learnings.py          # LearningsStage (session reflection)
+│   ├── merge.py              # MergeActivationBlock (combine verified extensions)
+│   ├── plan.py               # MetaPlanStage, ExtendPlanStage
+│   ├── publish_pr.py         # PublishPRStage (push + PR creation)
+│   ├── select_pipeline.py    # Pipeline selection helpers
+│   └── verify.py             # MetaVerifyStage, ExtendVerifyStage
+│
+├── resources/
+│   ├── ci_gate.yaml          # CI gate rules and configuration
+│   └── config.yaml           # Auto-harness configuration template
+│
+├── skills/
+│   ├── assess/SKILL.md       # Assessment skill
+│   ├── commit/SKILL.md       # Commit skill
+│   ├── communicate/SKILL.md  # Communication skill
+│   ├── design_ext/SKILL.md   # Extension design skill
+│   ├── implement/SKILL.md    # Implementation skill
+│   ├── implement_ext/SKILL.md # Extended implementation skill
+│   ├── plan/SKILL.md         # Planning skill
+│   ├── select_pipeline/SKILL.md  # Pipeline selection skill
+│   ├── verify/SKILL.md       # Verification skill
+│   └── verify_ext/SKILL.md   # Extended verification skill
+│
+└── tools/
+    ├── __init__.py
+    └── experience_search_tool.py  # Tool for agents to search experience store
+</code></pre>
+
+</body>
+</html>
