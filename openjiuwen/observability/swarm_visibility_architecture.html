@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swarm Visibility — Unified Observability Architecture</title>
+    <style>
+        :root {
+            --bg: #101318;
+            --panel: #181d24;
+            --panel-2: #202733;
+            --line: #303947;
+            --text: #eef2f7;
+            --muted: #a7b0bf;
+            --blue: #62a8ff;
+            --green: #48d597;
+            --amber: #f7bd4b;
+            --red: #ff7b7b;
+            --violet: #ba9cff;
+            --cyan: #53d6e8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 15px;
+            line-height: 1.65;
+        }
+        .wrap { max-width: 1120px; margin: 0 auto; padding: 34px 22px 72px; }
+        header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: start;
+            padding-bottom: 34px;
+            margin-bottom: 34px;
+            border-bottom: 1px solid var(--line);
+        }
+        h1 { font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1.05; letter-spacing: 0; margin-bottom: 16px; }
+        h2 { font-size: 1.45rem; margin: 0 0 18px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+        h3 { color: var(--blue); font-size: 1.05rem; margin: 24px 0 8px; }
+        p { color: var(--muted); margin-bottom: 14px; }
+        code {
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: .86em;
+            padding: 1px 6px;
+        }
+        section { margin-bottom: 46px; }
+        table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .92rem; }
+        th, td { border-bottom: 1px solid var(--line); padding: 11px 12px; text-align: left; vertical-align: top; }
+        th { color: var(--muted); background: var(--panel); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+        ul { padding-left: 20px; color: var(--muted); margin: 10px 0; }
+        li { margin: 4px 0; }
+        .subtitle { max-width: 780px; font-size: 1.08rem; }
+        .toolbar {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .toolbar button {
+            border: 1px solid var(--line);
+            background: var(--panel-2);
+            color: var(--text);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .toolbar button[aria-pressed="true"] { background: var(--blue); color: #07101e; border-color: var(--blue); }
+        .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+        .badge { border-radius: 999px; padding: 4px 11px; font-size: .8rem; font-weight: 700; border: 1px solid var(--line); background: var(--panel); }
+        .badge.blue { color: var(--blue); }
+        .badge.green { color: var(--green); }
+        .badge.amber { color: var(--amber); }
+        .badge.violet { color: var(--violet); }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 18px;
+        }
+        .card strong { display: block; margin-bottom: 8px; color: var(--text); }
+        .flow {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 18px;
+            overflow-x: auto;
+            margin: 14px 0;
+        }
+        .flow pre {
+            color: var(--muted);
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: .86rem;
+            line-height: 1.75;
+            white-space: pre;
+        }
+        .b { color: var(--blue); font-weight: 700; }
+        .g { color: var(--green); font-weight: 700; }
+        .a { color: var(--amber); font-weight: 700; }
+        .v { color: var(--violet); font-weight: 700; }
+        .c { color: var(--cyan); font-weight: 700; }
+        .r { color: var(--red); font-weight: 700; }
+        .callout { border-left: 3px solid var(--blue); background: var(--panel); border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0; }
+        .callout.warn { border-left-color: var(--amber); }
+        .callout.good { border-left-color: var(--green); }
+        .phase { border-left: 2px solid var(--line); margin-left: 10px; padding-left: 20px; }
+        .phase-item { position: relative; margin-bottom: 18px; }
+        .phase-item:before {
+            content: "";
+            position: absolute;
+            left: -27px;
+            top: 7px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--panel-2);
+            border: 2px solid var(--muted);
+        }
+        .phase-item.done:before { background: var(--green); border-color: var(--green); }
+        .phase-title { color: var(--text); font-weight: 700; }
+        [data-lang="zh"] { display: none; }
+        body.lang-zh [data-lang="en"] { display: none; }
+        body.lang-zh [data-lang="zh"] { display: revert; }
+        @media (max-width: 760px) {
+            header { grid-template-columns: 1fr; }
+            .grid { grid-template-columns: 1fr; }
+            th, td { padding: 9px 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <div>
+            <h1 data-lang="en">Swarm Visibility</h1>
+            <h1 data-lang="zh">Swarm Visibility 全景可观测性</h1>
+            <p class="subtitle" data-lang="en">
+                A combined architecture for OpenJiuwen observability: OpenTelemetry for developers,
+                TraceHound for users, and shared semantics that make the same agent activity visible
+                from operational and narrative perspectives.
+            </p>
+            <p class="subtitle" data-lang="zh">
+                OpenJiuwen 可观测性的统一架构：面向开发者的 OpenTelemetry、面向用户的 TraceHound，
+                以及把同一组智能体行为连接起来的共享语义。
+            </p>
+            <div class="badges">
+                <span class="badge blue">Developer OTel</span>
+                <span class="badge green">User TraceHound</span>
+                <span class="badge violet">Shared Semantics</span>
+                <span class="badge amber">Phased Roadmap</span>
+            </div>
+        </div>
+        <div class="toolbar" aria-label="Language">
+            <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
+            <button type="button" data-set-lang="zh" aria-pressed="false">中文</button>
+        </div>
+    </header>
+
+    <section>
+        <h2 data-lang="en">1. Executive Summary</h2>
+        <h2 data-lang="zh">1. 摘要</h2>
+        <p data-lang="en">
+            Swarm Visibility is not one storage backend or one UI. It is a two-layer
+            observability model for agent systems. Developers need traces, metrics, spans,
+            latency, failure signals, and cost attribution across many runs. Users need a
+            clear replay of what happened in one session and what to do next.
+        </p>
+        <p data-lang="zh">
+            Swarm Visibility 不是单一存储后端或单一界面，而是智能体系统的双层可观测模型。
+            开发者需要跨多次运行的 trace、metric、span、延迟、失败信号和成本归因；
+            用户需要看到某个会话中发生了什么，以及下一步应该如何处理。
+        </p>
+        <div class="grid">
+            <div class="card">
+                <strong data-lang="en">OTel Layer: Developer Visibility</strong>
+                <strong data-lang="zh">OTel 层：开发者可见性</strong>
+                <p data-lang="en">Instrumented OpenTelemetry spans and future metrics exported to Langfuse, collectors, Prometheus, and Grafana.</p>
+                <p data-lang="zh">通过 OpenTelemetry span 和后续 metric，把数据导出到 Langfuse、Collector、Prometheus 与 Grafana。</p>
+            </div>
+            <div class="card">
+                <strong data-lang="en">TraceHound Layer: User Visibility</strong>
+                <strong data-lang="zh">TraceHound 层：用户可见性</strong>
+                <p data-lang="en">A built-in session and turn viewer that reads existing history files and explains outcomes, errors, tokens, tools, and costs.</p>
+                <p data-lang="zh">内置的会话与回合查看器，读取已有 history 文件，并解释结果、错误、token、工具和成本。</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 data-lang="en">2. Two Audiences, Two Products</h2>
+        <h2 data-lang="zh">2. 两类读者，两种产品</h2>
+        <table>
+            <thead>
+            <tr>
+                <th data-lang="en">Dimension</th><th data-lang="en">OTel</th><th data-lang="en">TraceHound</th>
+                <th data-lang="zh">维度</th><th data-lang="zh">OTel</th><th data-lang="zh">TraceHound</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td data-lang="en">Audience</td><td data-lang="en">Developers and operators</td><td data-lang="en">End users and support</td>
+                <td data-lang="zh">读者</td><td data-lang="zh">开发者和运维人员</td><td data-lang="zh">终端用户和支持人员</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Question</td><td data-lang="en">Why is this agent slow, expensive, or failing?</td><td data-lang="en">What did my agent do in this session?</td>
+                <td data-lang="zh">核心问题</td><td data-lang="zh">为什么这个智能体慢、贵或失败？</td><td data-lang="zh">我的智能体在这个会话里做了什么？</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Data path</td><td data-lang="en">Instrumentation pushes OTLP data</td><td data-lang="en">Viewer reads append-only history files</td>
+                <td data-lang="zh">数据路径</td><td data-lang="zh">通过 instrumentation 推送 OTLP 数据</td><td data-lang="zh">查看器读取追加写入的历史文件</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Surface</td><td data-lang="en">Langfuse, collector, dashboards</td><td data-lang="en">JiuwenSwarm web UI</td>
+                <td data-lang="zh">界面</td><td data-lang="zh">Langfuse、Collector、Dashboard</td><td data-lang="zh">JiuwenSwarm Web UI</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2 data-lang="en">3. Holistic Architecture</h2>
+        <h2 data-lang="zh">3. 整体架构</h2>
+        <div class="flow">
+<pre><span class="c">Agent runtime activity</span>
+  │
+  ├── <span class="b">Developer layer: OpenTelemetry</span>
+  │       Runner.callback_framework / DeepAgentRail / backend bridges
+  │       └── spans, traces, metrics, cost attributes
+  │           └── OTLP Collector ── Langfuse / Prometheus / Grafana
+  │
+  ├── <span class="g">User layer: TraceHound</span>
+  │       history.jsonl + metadata.json
+  │       └── sessions, turns, event timeline, outcome classification
+  │           └── JiuwenSwarm web UI + LLM analysis
+  │
+  └── <span class="v">Shared semantics</span>
+          session_id, request_id, agent_id, model, tool, token usage,
+          cost version, error category, trajectory step</pre>
+        </div>
+        <p data-lang="en">
+            The systems stay separate by design. OTel is push-based and operational.
+            TraceHound is file-based and user-facing. They combine through vocabulary,
+            IDs, cost semantics, and error classification rather than by sharing one runtime path.
+        </p>
+        <p data-lang="zh">
+            两个系统应保持分离。OTel 是推送式、偏运维的链路；TraceHound 是基于文件、
+            面向用户的链路。它们通过术语、ID、成本语义和错误分类连接，而不是强行合并为同一条运行时路径。
+        </p>
+        <div class="callout good">
+            <p data-lang="en">
+                <strong>Independent operation:</strong> TraceHound can work without any OTel
+                enhancement being enabled or installed. It reads the agent trajectory/history
+                records that JiuwenSwarm already writes, so users still get session replay,
+                turn analysis, outcome classification, and LLM analysis even when no spans,
+                collector, Langfuse, Prometheus, or metrics pipeline exists.
+            </p>
+            <p data-lang="zh">
+                <strong>独立运行：</strong>TraceHound 不依赖任何 OTel 增强是否启用或安装。
+                它读取 JiuwenSwarm 已经写入的智能体 trajectory/history 记录。因此即使没有 span、
+                Collector、Langfuse、Prometheus 或 metrics pipeline，用户仍然可以使用会话回放、
+                回合分析、结果分类和 LLM 分析。
+            </p>
+        </div>
+    </section>
+
+    <section>
+        <h2 data-lang="en">4. Current State</h2>
+        <h2 data-lang="zh">4. 当前状态</h2>
+        <table>
+            <thead>
+            <tr>
+                <th data-lang="en">Area</th><th data-lang="en">Status</th><th data-lang="en">Notes</th>
+                <th data-lang="zh">领域</th><th data-lang="zh">状态</th><th data-lang="zh">说明</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td data-lang="en">Team-agent OTel</td><td data-lang="en"><span class="g">Present</span></td><td data-lang="en">Team roots, iteration spans, invoke spans, LLM/tool spans, monitor spans.</td>
+                <td data-lang="zh">团队智能体 OTel</td><td data-lang="zh"><span class="g">已存在</span></td><td data-lang="zh">包含 team root、iteration、invoke、LLM/tool 和 monitor span。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Standalone DeepAgent OTel</td><td data-lang="en"><span class="a">In progress</span></td><td data-lang="en">Factory opt-in and standalone roots are the first PR scope; session-keyed roots harden concurrency.</td>
+                <td data-lang="zh">独立 DeepAgent OTel</td><td data-lang="zh"><span class="a">进行中</span></td><td data-lang="zh">首个 PR 覆盖 factory opt-in 和 standalone root；session-keyed root 用于并发安全。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">BaseAgent/workflow OTel</td><td data-lang="en"><span class="g">Present</span></td><td data-lang="en"><code>extensions/tracer_otel</code> uses a private provider and stays separate.</td>
+                <td data-lang="zh">BaseAgent/workflow OTel</td><td data-lang="zh"><span class="g">已存在</span></td><td data-lang="zh"><code>extensions/tracer_otel</code> 使用独立 provider，保持分离。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Backend bridges</td><td data-lang="en"><span class="g">Present</span></td><td data-lang="en">Claude/Codex bridge runtime data into Jiuwen spans.</td>
+                <td data-lang="zh">后端桥接</td><td data-lang="zh"><span class="g">已存在</span></td><td data-lang="zh">Claude/Codex 将运行时数据桥接为 Jiuwen span。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">TraceHound</td><td data-lang="en"><span class="g">Shipped</span></td><td data-lang="en">Session list, turn list, turn detail, classification, charts, LLM analysis. Works independently from OTel by reading trajectory/history records.</td>
+                <td data-lang="zh">TraceHound</td><td data-lang="zh"><span class="g">已发布</span></td><td data-lang="zh">包含会话列表、回合列表、详情、分类、图表和 LLM 分析。通过读取 trajectory/history 记录独立于 OTel 运行。</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2 data-lang="en">5. Shared Semantics</h2>
+        <h2 data-lang="zh">5. 共享语义</h2>
+        <table>
+            <thead>
+            <tr>
+                <th data-lang="en">Concept</th><th data-lang="en">OTel</th><th data-lang="en">TraceHound</th><th data-lang="en">Alignment</th>
+                <th data-lang="zh">概念</th><th data-lang="zh">OTel</th><th data-lang="zh">TraceHound</th><th data-lang="zh">对齐方式</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td data-lang="en">Session</td><td data-lang="en">Session/root span and <code>session_id</code></td><td data-lang="en">Session directory and metadata</td><td data-lang="en">Use the same stable session identifier.</td>
+                <td data-lang="zh">会话</td><td data-lang="zh">Session/root span 与 <code>session_id</code></td><td data-lang="zh">会话目录和 metadata</td><td data-lang="zh">使用同一个稳定 session id。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Turn</td><td data-lang="en">Iteration span plus trajectory events</td><td data-lang="en">Records grouped by <code>request_id</code></td><td data-lang="en">Trajectory events should mirror turn-event ordering.</td>
+                <td data-lang="zh">回合</td><td data-lang="zh">Iteration span 加 trajectory event</td><td data-lang="zh">按 <code>request_id</code> 分组的记录</td><td data-lang="zh">trajectory event 应与 turn event 顺序保持一致。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Cost</td><td data-lang="en">Estimated span attributes</td><td data-lang="en">Input/output/total cost</td><td data-lang="en">Share one pricing table and version.</td>
+                <td data-lang="zh">成本</td><td data-lang="zh">估算的 span attribute</td><td data-lang="zh">输入、输出和总成本</td><td data-lang="zh">共享同一份价格表和版本。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">Failure</td><td data-lang="en">Span status and error attributes</td><td data-lang="en">Outcome and error category</td><td data-lang="en">Map TraceHound categories onto OTel attributes.</td>
+                <td data-lang="zh">失败</td><td data-lang="zh">Span status 和错误 attribute</td><td data-lang="zh">结果和错误分类</td><td data-lang="zh">把 TraceHound 分类映射到 OTel attribute。</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2 data-lang="en">6. Roadmap</h2>
+        <h2 data-lang="zh">6. 路线图</h2>
+        <div class="phase">
+            <div class="phase-item done">
+                <div class="phase-title" data-lang="en">Milestone 1 — Developer visibility baseline</div>
+                <div class="phase-title" data-lang="zh">里程碑 1：开发者可见性基础</div>
+                <p data-lang="en">Freeze current OTel behavior, add standalone DeepAgent traces, and make session-keyed roots concurrency-safe.</p>
+                <p data-lang="zh">冻结当前 OTel 行为，增加独立 DeepAgent trace，并用 session-keyed root 保证并发安全。</p>
+            </div>
+            <div class="phase-item">
+                <div class="phase-title" data-lang="en">Milestone 2 — Session and trajectory semantics</div>
+                <div class="phase-title" data-lang="zh">里程碑 2：会话与轨迹语义</div>
+                <p data-lang="en">Add reliable session finalization, ordered trajectory events, and shared error categories.</p>
+                <p data-lang="zh">增加可靠的 session finalization、ordered trajectory event 和共享错误分类。</p>
+            </div>
+            <div class="phase-item">
+                <div class="phase-title" data-lang="en">Milestone 3 — Operational metrics and cost</div>
+                <div class="phase-title" data-lang="zh">里程碑 3：运维指标与成本</div>
+                <p data-lang="en">Add opt-in metrics, dashboards, cost estimation, and multi-agent aggregation.</p>
+                <p data-lang="zh">增加可选 metrics、dashboard、成本估算和多智能体聚合。</p>
+            </div>
+            <div class="phase-item">
+                <div class="phase-title" data-lang="en">Milestone 4 — User/developer correlation</div>
+                <div class="phase-title" data-lang="zh">里程碑 4：用户视图与开发者视图关联</div>
+                <p data-lang="en">Expose trace IDs in TraceHound where safe, align pricing and failure vocabulary, and document handoff workflows.</p>
+                <p data-lang="zh">在安全场景下让 TraceHound 展示 trace id，对齐价格和失败术语，并记录问题交接流程。</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 data-lang="en">7. Non-Goals</h2>
+        <h2 data-lang="zh">7. 非目标</h2>
+        <ul data-lang="en">
+            <li>Do not merge <code>agent_teams/observability</code> and <code>extensions/tracer_otel</code> providers.</li>
+            <li>Do not re-instrument TraceHound; it must preserve zero additional hot-path overhead.</li>
+            <li>Do not force OTel and TraceHound into one database or one UI.</li>
+            <li>Do not emit cost as exact when model pricing is unknown or stale.</li>
+        </ul>
+        <ul data-lang="zh">
+            <li>不要合并 <code>agent_teams/observability</code> 与 <code>extensions/tracer_otel</code> 的 provider。</li>
+            <li>不要为了 TraceHound 重新增加 instrumentation；它必须保持热路径零额外开销。</li>
+            <li>不要强行把 OTel 和 TraceHound 合并到同一个数据库或同一个 UI。</li>
+            <li>当模型价格未知或过期时，不要把成本展示为精确值。</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2 data-lang="en">8. Source Documents</h2>
+        <h2 data-lang="zh">8. 来源文档</h2>
+        <p data-lang="en">
+            This page synthesizes <code>PLAN.md</code>, <code>TraceHound.md</code>,
+            <code>RAT-Unified-Observability.md</code>, and <code>observability_architechture.html</code>.
+        </p>
+        <p data-lang="zh">
+            本页面综合了 <code>PLAN.md</code>、<code>TraceHound.md</code>、
+            <code>RAT-Unified-Observability.md</code> 和 <code>observability_architechture.html</code>。
+        </p>
+    </section>
+</div>
+<script>
+    const buttons = document.querySelectorAll("[data-set-lang]");
+    const setLanguage = (lang) => {
+        document.body.classList.toggle("lang-zh", lang === "zh");
+        document.documentElement.lang = lang === "zh" ? "zh" : "en";
+        buttons.forEach((button) => {
+            button.setAttribute("aria-pressed", String(button.dataset.setLang === lang));
+        });
+        localStorage.setItem("swarm_visibility_lang", lang);
+    };
+    buttons.forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.setLang)));
+    setLanguage(localStorage.getItem("swarm_visibility_lang") || "en");
+</script>
+</body>
+</html>
