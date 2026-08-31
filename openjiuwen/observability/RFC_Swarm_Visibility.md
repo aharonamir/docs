@@ -11,6 +11,12 @@ The goal is holistic visibility over agent activity without forcing the two laye
 
 TraceHound is independently useful and independently deployable. It does **not** require the OTel enhancement, an OTel Collector, Langfuse, Prometheus, Grafana, or any span instrumentation. It reads the trajectory/history records JiuwenSwarm already writes and can provide session replay, turn analysis, outcome classification, and LLM-powered analysis even when the developer observability roadmap is not implemented.
 
+Current status:
+
+- **OTel Phase 1, Standalone DeepAgent OTel:** shipped as branch PR `#427` with passing checks.
+- **OTel Phases 2-6:** waiting.
+- **TraceHound MVP:** in progress and independent from OTel.
+
 ## Problem
 
 Agent systems are difficult to inspect after they run.
@@ -43,7 +49,7 @@ Existing:
 - Claude and Codex bridge support under `openjiuwen/agent_teams/observability/{claude,codex}/`.
 - Langfuse and OTel Collector deployment support in `deploy/observability/`.
 
-In progress:
+Shipped as branch PR `#427`:
 
 - Standalone DeepAgent OTel opt-in.
 - Session-keyed standalone roots to avoid concurrency bugs and stale context parenting.
@@ -54,17 +60,17 @@ Missing or incomplete:
 - Ordered per-iteration trajectory events.
 - OTel metrics.
 - Cost model and multi-agent aggregation.
+- Cross-layer TraceHound-to-OTel correlation.
 
 ### TraceHound User Layer
 
 Existing:
 
-- Session list, turn list, and turn detail views.
-- Reads `~/.jiuwenswarm/agent/sessions/<session_id>/history.jsonl`.
-- Groups turns by `request_id`.
-- Classifies outcomes, error categories, and query types.
-- Shows token, latency, cost, model, tool, and event statistics.
-- Provides LLM-powered analysis with browser-side cache invalidation.
+In progress:
+
+- TraceHound MVP for user-facing trajectory/session review.
+- Reads trajectory/history records from the existing JiuwenSwarm data path.
+- Planned MVP shape: session list, turn list, turn detail, outcome/error classification, metrics summaries, and LLM-powered analysis.
 
 Required preservation:
 
@@ -99,6 +105,8 @@ TraceHound is therefore not blocked by OTel phases 0-6. Those phases improve dev
 
 ### Milestone 1 — Developer Visibility Baseline
 
+Status: **shipped as branch PR `#427` with passing checks**.
+
 **Phase 0: Freeze current OTel contract**
 
 - Lock down team trace parent tree.
@@ -122,6 +130,8 @@ Acceptance:
 - Consecutive and concurrent standalone runs produce independent traces.
 
 ### Milestone 2 — Session And Trajectory Semantics
+
+Status: **waiting**.
 
 **Phase 2: Session-level spans**
 
@@ -147,6 +157,8 @@ Acceptance:
 - TraceHound turn event vocabulary and OTel trajectory vocabulary use compatible names for model, tool, duration, token, and error facts.
 
 ### Milestone 3 — Operational Metrics And Cost
+
+Status: **waiting**.
 
 **Phase 4: OTel metrics**
 
@@ -176,6 +188,8 @@ Acceptance:
 
 ### Milestone 4 — User/Developer Correlation
 
+Status: **waiting**. This should follow the TraceHound MVP and enough OTel ID propagation to correlate safely.
+
 **Phase 6: Cross-layer correlation**
 
 - Preserve and expose shared identifiers where safe: `session_id`, `request_id`, trace id, span id.
@@ -187,6 +201,26 @@ Acceptance:
 
 - A support/debugging workflow can start in TraceHound and identify the matching OTel trace.
 - Sensitive payload handling remains governed by each layer's current redaction rules.
+
+### Milestone 5 — TraceHound MVP
+
+Status: **in progress**.
+
+Build the user-facing trajectory/session viewer independently from OTel.
+
+Scope:
+
+- Read the trajectory/history records JiuwenSwarm already writes.
+- Group records into sessions and turns.
+- Show user-facing turn timelines and outcome classification.
+- Show token, latency, model, tool, and cost summaries where the history provides them.
+- Add LLM-powered analysis when a model is configured.
+
+Acceptance:
+
+- A user can inspect a previous session without enabling OTel.
+- No Collector, Langfuse, Prometheus, Grafana, or span instrumentation is required.
+- The MVP remains compatible with later OTel correlation work.
 
 ## Non-Goals
 
@@ -206,12 +240,13 @@ Acceptance:
 
 ## Initial PR Breakdown
 
-1. **PR 1:** Phase 0 + Phase 1 standalone DeepAgent OTel and session-keyed standalone roots.
+1. **PR 1:** Phase 0 + Phase 1 standalone DeepAgent OTel and session-keyed standalone roots. Status: shipped as PR `#427`.
 2. **PR 2:** Phase 2 session lifecycle finalization.
 3. **PR 3:** Phase 3 ordered trajectory span events and shared error vocabulary.
 4. **PR 4:** Phase 4 metrics provider, instruments, and collector deployment.
 5. **PR 5:** Phase 5 cost table, aggregation, and TraceHound pricing alignment.
 6. **PR 6:** Phase 6 TraceHound-to-OTel correlation UX/docs.
+7. **TraceHound MVP PR(s):** user-facing trajectory/session viewer. Status: in progress and independent from OTel.
 
 ## Source Documents
 

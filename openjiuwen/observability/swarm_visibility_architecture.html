@@ -155,10 +155,10 @@
                 以及把同一组智能体行为连接起来的共享语义。
             </p>
             <div class="badges">
-                <span class="badge blue">Developer OTel</span>
-                <span class="badge green">User TraceHound</span>
+                <span class="badge blue">OTel Phase 1 — PR #427</span>
+                <span class="badge green">TraceHound MVP — In Progress</span>
                 <span class="badge violet">Shared Semantics</span>
-                <span class="badge amber">Phased Roadmap</span>
+                <span class="badge amber">Later OTel Phases — Waiting</span>
             </div>
         </div>
         <div class="toolbar" aria-label="Language">
@@ -290,8 +290,8 @@
                 <td data-lang="zh">团队智能体 OTel</td><td data-lang="zh"><span class="g">已存在</span></td><td data-lang="zh">包含 team root、iteration、invoke、LLM/tool 和 monitor span。</td>
             </tr>
             <tr>
-                <td data-lang="en">Standalone DeepAgent OTel</td><td data-lang="en"><span class="a">In progress</span></td><td data-lang="en">Factory opt-in and standalone roots are the first PR scope; session-keyed roots harden concurrency.</td>
-                <td data-lang="zh">独立 DeepAgent OTel</td><td data-lang="zh"><span class="a">进行中</span></td><td data-lang="zh">首个 PR 覆盖 factory opt-in 和 standalone root；session-keyed root 用于并发安全。</td>
+                <td data-lang="en">Standalone DeepAgent OTel</td><td data-lang="en"><span class="g">Shipped as PR #427</span></td><td data-lang="en">Factory opt-in, standalone roots, and session-keyed concurrency-safe root handling are in the current branch PR. Checks are passing.</td>
+                <td data-lang="zh">独立 DeepAgent OTel</td><td data-lang="zh"><span class="g">已作为 PR #427 提交</span></td><td data-lang="zh">当前分支 PR 已包含 factory opt-in、standalone root，以及基于 session-key 的并发安全 root 处理。检查通过。</td>
             </tr>
             <tr>
                 <td data-lang="en">BaseAgent/workflow OTel</td><td data-lang="en"><span class="g">Present</span></td><td data-lang="en"><code>extensions/tracer_otel</code> uses a private provider and stays separate.</td>
@@ -302,8 +302,12 @@
                 <td data-lang="zh">后端桥接</td><td data-lang="zh"><span class="g">已存在</span></td><td data-lang="zh">Claude/Codex 将运行时数据桥接为 Jiuwen span。</td>
             </tr>
             <tr>
-                <td data-lang="en">TraceHound</td><td data-lang="en"><span class="g">Shipped</span></td><td data-lang="en">Session list, turn list, turn detail, classification, charts, LLM analysis. Works independently from OTel by reading trajectory/history records.</td>
-                <td data-lang="zh">TraceHound</td><td data-lang="zh"><span class="g">已发布</span></td><td data-lang="zh">包含会话列表、回合列表、详情、分类、图表和 LLM 分析。通过读取 trajectory/history 记录独立于 OTel 运行。</td>
+                <td data-lang="en">Later OTel phases</td><td data-lang="en"><span class="a">Waiting</span></td><td data-lang="en">Session lifecycle roots, ordered trajectory events, metrics, cost, aggregation, and cross-layer correlation remain roadmap items.</td>
+                <td data-lang="zh">后续 OTel 阶段</td><td data-lang="zh"><span class="a">等待中</span></td><td data-lang="zh">Session lifecycle root、ordered trajectory event、metrics、cost、aggregation 和跨层关联仍是路线图项目。</td>
+            </tr>
+            <tr>
+                <td data-lang="en">TraceHound MVP</td><td data-lang="en"><span class="a">In progress</span></td><td data-lang="en">The user-facing MVP is being built around session/turn trajectory review. It works independently from OTel by reading trajectory/history records.</td>
+                <td data-lang="zh">TraceHound MVP</td><td data-lang="zh"><span class="a">进行中</span></td><td data-lang="zh">面向用户的 MVP 正围绕 session/turn trajectory 查看能力建设。它通过读取 trajectory/history 记录独立于 OTel 运行。</td>
             </tr>
             </tbody>
         </table>
@@ -345,28 +349,34 @@
         <h2 data-lang="zh">6. 路线图</h2>
         <div class="phase">
             <div class="phase-item done">
-                <div class="phase-title" data-lang="en">Milestone 1 — Developer visibility baseline</div>
-                <div class="phase-title" data-lang="zh">里程碑 1：开发者可见性基础</div>
-                <p data-lang="en">Freeze current OTel behavior, add standalone DeepAgent traces, and make session-keyed roots concurrency-safe.</p>
-                <p data-lang="zh">冻结当前 OTel 行为，增加独立 DeepAgent trace，并用 session-keyed root 保证并发安全。</p>
+                <div class="phase-title" data-lang="en">Milestone 1 — Developer visibility baseline: shipped as PR #427</div>
+                <div class="phase-title" data-lang="zh">里程碑 1：开发者可见性基础，已作为 PR #427 提交</div>
+                <p data-lang="en">Standalone DeepAgent traces and session-keyed concurrency-safe roots are in the current branch PR with passing checks.</p>
+                <p data-lang="zh">独立 DeepAgent trace 和基于 session-key 的并发安全 root 已在当前分支 PR 中，检查通过。</p>
             </div>
             <div class="phase-item">
                 <div class="phase-title" data-lang="en">Milestone 2 — Session and trajectory semantics</div>
                 <div class="phase-title" data-lang="zh">里程碑 2：会话与轨迹语义</div>
-                <p data-lang="en">Add reliable session finalization, ordered trajectory events, and shared error categories.</p>
-                <p data-lang="zh">增加可靠的 session finalization、ordered trajectory event 和共享错误分类。</p>
+                <p data-lang="en">Waiting. Add reliable session finalization, ordered trajectory events, and shared error categories.</p>
+                <p data-lang="zh">等待中。增加可靠的 session finalization、ordered trajectory event 和共享错误分类。</p>
             </div>
             <div class="phase-item">
                 <div class="phase-title" data-lang="en">Milestone 3 — Operational metrics and cost</div>
                 <div class="phase-title" data-lang="zh">里程碑 3：运维指标与成本</div>
-                <p data-lang="en">Add opt-in metrics, dashboards, cost estimation, and multi-agent aggregation.</p>
-                <p data-lang="zh">增加可选 metrics、dashboard、成本估算和多智能体聚合。</p>
+                <p data-lang="en">Waiting. Add opt-in metrics, dashboards, cost estimation, and multi-agent aggregation.</p>
+                <p data-lang="zh">等待中。增加可选 metrics、dashboard、成本估算和多智能体聚合。</p>
             </div>
             <div class="phase-item">
                 <div class="phase-title" data-lang="en">Milestone 4 — User/developer correlation</div>
                 <div class="phase-title" data-lang="zh">里程碑 4：用户视图与开发者视图关联</div>
-                <p data-lang="en">Expose trace IDs in TraceHound where safe, align pricing and failure vocabulary, and document handoff workflows.</p>
-                <p data-lang="zh">在安全场景下让 TraceHound 展示 trace id，对齐价格和失败术语，并记录问题交接流程。</p>
+                <p data-lang="en">Waiting after TraceHound MVP and OTel IDs exist. Expose trace IDs where safe, align pricing and failure vocabulary, and document handoff workflows.</p>
+                <p data-lang="zh">等待 TraceHound MVP 与 OTel ID 就绪后推进。在安全场景下展示 trace id，对齐价格和失败术语，并记录问题交接流程。</p>
+            </div>
+            <div class="phase-item">
+                <div class="phase-title" data-lang="en">Milestone 5 — TraceHound MVP: in progress</div>
+                <div class="phase-title" data-lang="zh">里程碑 5：TraceHound MVP，进行中</div>
+                <p data-lang="en">Build the user-facing trajectory/session viewer independently from OTel. This milestone is not blocked by OTel phases.</p>
+                <p data-lang="zh">独立于 OTel 建设面向用户的 trajectory/session 查看器。该里程碑不受 OTel 阶段阻塞。</p>
             </div>
         </div>
     </section>
